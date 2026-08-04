@@ -343,16 +343,16 @@ internal sealed class MainWindow : Window
                 IReadOnlyList<string> transparentMaterials = await Task.Run(() => ListMtoonTransparentMaterials(file));
                 if (transparentMaterials.Count > 0)
                 {
-                    IReadOnlyList<string> cutoutMaterials = SelectMtoonTransparentModes(transparentMaterials);
-                    if (cutoutMaterials == null)
+                    IReadOnlyList<string> alphaMaterials = SelectMtoonTransparentModes(transparentMaterials);
+                    if (alphaMaterials == null)
                     {
                         return null;
                     }
 
                     CliOptions option = _settings.ToCliOptions(new[] { file });
-                    foreach (string material in cutoutMaterials)
+                    foreach (string material in alphaMaterials)
                     {
-                        option.MtoonTransparentCutoutMaterials.Add(material);
+                        option.MtoonTransparentAlphaMaterials.Add(material);
                     }
                     avatarJobs.Add(new ConversionJob(option, Path.GetFileName(file)));
                     continue;
@@ -454,7 +454,7 @@ internal sealed class MainWindow : Window
     private IReadOnlyList<string> SelectMtoonTransparentModes(IReadOnlyList<string> materials)
     {
         var dialog = new MtoonTransparentModeWindow(materials) { Owner = this };
-        return dialog.ShowDialog() == true ? dialog.CutoutMaterials : null;
+        return dialog.ShowDialog() == true ? dialog.AlphaMaterials : null;
     }
 
     private static async Task<ConversionRunResult> RunConversionProcessAsync(CliOptions options, string resonitePath)
@@ -575,9 +575,9 @@ internal sealed class MainWindow : Window
         AddNullableFloat(arguments, "--near-clip", options.NearClip);
         arguments.Add("--import-timeout");
         arguments.Add(options.ImportTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
-        foreach (string material in options.MtoonTransparentCutoutMaterials)
+        foreach (string material in options.MtoonTransparentAlphaMaterials)
         {
-            arguments.Add("--mtoon-transparent-cutout");
+            arguments.Add("--mtoon-transparent-alpha");
             arguments.Add(material);
         }
         foreach (string file in options.InputFiles)
@@ -1185,12 +1185,12 @@ internal sealed class AvatarSelectionWindow : Window
     }
 }
 
-/// <summary>Modal dialog that lets users override MToon Transparent materials to Cutout.</summary>
+/// <summary>Modal dialog that lets users override default Cutout MToon materials to Alpha.</summary>
 internal sealed class MtoonTransparentModeWindow : Window
 {
     private readonly Dictionary<string, ComboBox> _modeBoxes = new(StringComparer.Ordinal);
 
-    public IReadOnlyList<string> CutoutMaterials { get; private set; } = Array.Empty<string>();
+    public IReadOnlyList<string> AlphaMaterials { get; private set; } = Array.Empty<string>();
 
     public MtoonTransparentModeWindow(IReadOnlyList<string> materials)
     {
@@ -1273,7 +1273,7 @@ internal sealed class MtoonTransparentModeWindow : Window
             };
             mode.Items.Add("Alpha");
             mode.Items.Add("Cutout");
-            mode.SelectedIndex = 0;
+            mode.SelectedIndex = 1;
             Grid.SetColumn(mode, 1);
             row.Children.Add(mode);
             _modeBoxes[material] = mode;
@@ -1289,8 +1289,8 @@ internal sealed class MtoonTransparentModeWindow : Window
 
     private void Confirm()
     {
-        CutoutMaterials = _modeBoxes
-            .Where(pair => string.Equals(pair.Value.SelectedItem as string, "Cutout", StringComparison.Ordinal))
+        AlphaMaterials = _modeBoxes
+            .Where(pair => string.Equals(pair.Value.SelectedItem as string, "Alpha", StringComparison.Ordinal))
             .Select(pair => pair.Key)
             .ToArray();
         DialogResult = true;

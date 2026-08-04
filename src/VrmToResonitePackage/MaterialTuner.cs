@@ -25,7 +25,7 @@ internal static class MaterialTuner
     }
 
     public static async Task Apply(Slot root, Slot assetsSlot, VrmModel vrm, string vrmPath,
-        IReadOnlySet<string> mtoonTransparentCutoutMaterials = null)
+        IReadOnlySet<string> mtoonTransparentAlphaMaterials = null)
     {
         int tuned = 0;
         var textureCache = new Dictionary<(int ImageIndex, TextureTransform Transform), StaticTexture2D>();
@@ -36,7 +36,7 @@ internal static class MaterialTuner
             if (info != null)
             {
                 await ApplyInfo(material, info, vrmPath, assetsSlot, textureCache, rampCache,
-                    mtoonTransparentCutoutMaterials);
+                    mtoonTransparentAlphaMaterials);
             }
             else
             {
@@ -77,11 +77,11 @@ internal static class MaterialTuner
         string vrmPath, Slot assetsSlot,
         Dictionary<(int ImageIndex, TextureTransform Transform), StaticTexture2D> textureCache,
         Dictionary<string, StaticTexture2D> rampCache,
-        IReadOnlySet<string> mtoonTransparentCutoutMaterials)
+        IReadOnlySet<string> mtoonTransparentAlphaMaterials)
     {
         bool useCutoutForTransparent = info.IsMToon &&
             info.AlphaMode == "blend" &&
-            mtoonTransparentCutoutMaterials?.Contains(info.Name) == true;
+            mtoonTransparentAlphaMaterials?.Contains(info.Name) != true;
 
         // --- Alpha handling (MToon spec: explicit ZWrite + render queue) ---
         switch (info.AlphaMode)

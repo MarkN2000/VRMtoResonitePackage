@@ -228,7 +228,7 @@ internal static class Converter
                 if (options.NoAvatar)
                 {
                     await MaterialTuner.Apply(root, assetsSlot, vrm, vrmPath,
-                        options.MtoonTransparentCutoutMaterials);
+                        options.MtoonTransparentAlphaMaterials);
                     SpringBoneSetup.Apply(root, vrm);
                 }
                 else
@@ -249,7 +249,7 @@ internal static class Converter
                     }
                     AvatarSetup.Build(root, vrm, setupOptions);
                     await MaterialTuner.Apply(root, assetsSlot, vrm, vrmPath,
-                        options.MtoonTransparentCutoutMaterials);
+                        options.MtoonTransparentAlphaMaterials);
                     await AvatarSetup.ApplyFirstPersonAutoAsync(root, vrm);
                     SpringBoneSetup.Apply(root, vrm);
                 }
