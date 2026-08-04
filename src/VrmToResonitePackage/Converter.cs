@@ -239,7 +239,6 @@ internal static class Converter
                         FaceTracking = options.FaceTracking,
                         Protect = !options.NoProtection,
                         ExpressionMenu = !options.NoExpressionMenu,
-                        DefaultUserScale = options.DefaultUserScale,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -257,7 +256,7 @@ internal static class Converter
                 VrmMetadataSetup.Apply(root, vrm);
                 await SetupThumbnail(root, assetsSlot, vrm, vrmPath);
 
-                await MeshLoadingSetup.Apply(root);
+                await MeshLoadingSetup.Apply(root, options.DefaultUserScale && !options.NoAvatar);
 
                 // Let deferred import tasks (alpha detection, normal map detection, ...) settle.
                 for (int i = 0; i < 30; i++)
@@ -455,7 +454,6 @@ internal static class Converter
                         Protect = !options.NoProtection,
                         // VRChat expressions live in Animator/menu layers, out of scope: visemes + blink only.
                         ExpressionMenu = false,
-                        DefaultUserScale = options.DefaultUserScale,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -471,7 +469,7 @@ internal static class Converter
                 // Reflect prefab-authored scene state (inactive GameObjects, initial blendshape weights).
                 Vrchat.VrchatSceneSetup.Apply(root, avatar);
 
-                await MeshLoadingSetup.Apply(root);
+                await MeshLoadingSetup.Apply(root, options.DefaultUserScale && !options.NoAvatar);
 
                 for (int i = 0; i < 30; i++)
                 {

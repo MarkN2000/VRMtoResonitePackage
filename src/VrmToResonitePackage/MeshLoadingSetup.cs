@@ -21,7 +21,7 @@ internal static class MeshLoadingSetup
     private const string HeadPoseVariable = "modular_avatar/HumanBonePose.head";
     private const string AvatarPoseNodeHeadVariable = "modular_avatar/AvatarPoseNode.Head";
 
-    public static async Task Apply(Slot root)
+    public static async Task Apply(Slot root, bool addDefaultUserScale)
     {
         List<MeshRenderer> renderers = root.GetComponentsInChildren<MeshRenderer>()
             .Where(renderer => renderer.Mesh.Target != null)
@@ -49,6 +49,7 @@ internal static class MeshLoadingSetup
                               ?? root.FindChild("Avatar Settings")
                               ?? root.AddSlot("<color=#00ffff>Avatar Settings</color>");
         PublishAvatarSettingsRoot(avatarSettings);
+        AddDefaultUserScale(avatarSettings, addDefaultUserScale);
         await ImportAvatarGrabEquip(root, avatarSettings);
         Slot loadingDisplay = avatarSettings.AddSlot("Avatar Loading Display");
         Slot standIn = await ImportLoadingStandIn(loadingDisplay);
@@ -70,6 +71,21 @@ internal static class MeshLoadingSetup
         standInDriver.VariableName.Value = MeshNotLoadedVariable;
         standInDriver.Target.Target = invertDriver.State;
         standInDriver.DefaultValue.Value = true;
+    }
+
+    private static void AddDefaultUserScale(Slot avatarSettings, bool enabled)
+    {
+        if (!enabled)
+        {
+            return;
+        }
+
+        Slot settingsSlot = avatarSettings.FindChild("Default User Scale")
+                         ?? avatarSettings.AddSlot("Default User Scale");
+        DefaultUserScale userScale = settingsSlot.GetComponent<DefaultUserScale>()
+                                  ?? settingsSlot.AttachComponent<DefaultUserScale>();
+        userScale.DefaultScale.Value = 1f;
+        UniLog.Log("DefaultUserScale を Avatar Settings/Default User Scale に付与: DefaultScale = 1");
     }
 
     private static void EnsureDynamicVariableSpace(Slot root)

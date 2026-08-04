@@ -26,7 +26,7 @@
     "GenerateFaceTracking": "Generate face-tracking drivers",
     "NoAvatarProtection": "Do not add avatar protection",
     "NoExpressionMenu": "Do not generate an expression menu",
-    "KeepOriginalAvatarScale": "Keep the avatar's original scale",
+    "KeepOriginalAvatarScale": "Add DefaultUserScale (value: 1)",
     "KeepWorkingFiles": "Keep temporary working files",
     "ChooseTransparentMode": "Choose how to convert transparent materials",
     "ViewForwardOffset": "View forward offset (m)",

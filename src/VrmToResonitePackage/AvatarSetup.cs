@@ -26,12 +26,6 @@ internal sealed class AvatarSetupOptions
     /// <summary>AvatarRenderSettings near clip distance. Zero or negative disables the override.</summary>
     public float NearClip { get; set; } = 0.075f;
 
-    /// <summary>
-    /// Attach a DefaultUserScale component so the wearer is shrunk to the avatar's real size
-    /// (DefaultScale = AvatarHeight / Resonite's 1.75m default height) instead of the avatar
-    /// being stretched up to the player's height.
-    /// </summary>
-    public bool DefaultUserScale { get; set; }
 }
 
 /// <summary>
@@ -151,25 +145,6 @@ internal static class AvatarSetup
             // VRIKAvatarの初期値はVRM向けに適していないため上書きする。
             avatar.FeetHoverHeight.Value = 0f;
             avatar.MaxFeetVelocityOffset.Value = 0.05f;
-
-            if (options.DefaultUserScale)
-            {
-                // Resoniteはアバターを着用者の身長(既定1.75m)まで引き伸ばすため、等身の低い
-                // アバターが巨大化する。代わりに着用者側を AvatarHeight/1.75 倍に縮めて
-                // アバターを原寸サイズで表示する。AvatarHeightはSetupで確定済み。
-                const float ResoniteDefaultHeight = 1.75f;
-                float scale = avatar.AvatarHeight.Value / ResoniteDefaultHeight;
-                if (scale > 0f)
-                {
-                    DefaultUserScale userScale = root.AttachComponent<DefaultUserScale>();
-                    userScale.DefaultScale.Value = scale;
-                    UniLog.Log($"DefaultUserScale を付与: AvatarHeight {avatar.AvatarHeight.Value:F3}m / {ResoniteDefaultHeight}m = {scale:F3}");
-                }
-                else
-                {
-                    UniLog.Warning("AvatarHeightが0以下のためDefaultUserScaleの付与をスキップします。");
-                }
-            }
 
             IAvatarObject leftHandObject = root.GetComponentInChildren((IAvatarObject o) => o.Node == BodyNode.LeftHand);
             IAvatarObject rightHandObject = root.GetComponentInChildren((IAvatarObject o) => o.Node == BodyNode.RightHand);
