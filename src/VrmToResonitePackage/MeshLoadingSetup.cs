@@ -215,6 +215,7 @@ internal static class MeshLoadingSetup
             await ConvertPackdbReferencesToResdb(graph, package, avatarSettings.Engine);
             Slot packageRoot = avatarSettings.AddSlot("Avatar Grab & Equip");
             packageRoot.LoadObject(graph, record);
+            packageRoot.PersistentSelf = true;
             ConnectAvatarGrabbable(packageRoot, avatarRoot);
             packageRoot.ForeachComponentInChildren(delegate(IPackageImportEventReceiver receiver)
             {
@@ -246,17 +247,18 @@ internal static class MeshLoadingSetup
             return;
         }
 
-        List<ReferenceField<Grabbable>> emptyReferences = packageRoot
-            .GetComponentsInChildren<ReferenceField<Grabbable>>()
+        List<ReferenceField<IGrabbable>> emptyReferences = packageRoot
+            .GetComponentsInChildren<ReferenceField<IGrabbable>>()
             .Where(reference => reference.Reference.Target == null)
             .ToList();
         if (emptyReferences.Count != 1)
         {
-            UniLog.Warning($"Avatar Grab & Equip expected one empty Grabbable ReferenceField, found {emptyReferences.Count}.");
+            UniLog.Warning($"Avatar Grab & Equip expected one empty IGrabbable ReferenceField, found {emptyReferences.Count}.");
             return;
         }
 
         emptyReferences[0].Reference.Target = avatarGrabbable;
+        UniLog.Log($"Avatar Grab & Equip connected to the avatar Grabbable: {packageRoot.Name}");
     }
 
     private static void PublishAvatarSettingsRoot(Slot avatarSettings)
