@@ -15,6 +15,7 @@ namespace VrmToResonitePackage;
 internal static class MeshLoadingSetup
 {
     private const string DynamicVariableSpaceName = "modular_avatar";
+    private const string AvatarSettingsRootVariable = "modular_avatar/AvatarSettingsRoot";
     private const string MeshNotLoadedVariable = "modular_avatar/MeshNotLoaded";
     private const string HeadBoneVariable = "modular_avatar/HumanBone.head";
     private const string HeadPoseVariable = "modular_avatar/HumanBonePose.head";
@@ -47,6 +48,8 @@ internal static class MeshLoadingSetup
         Slot avatarSettings = root.FindChild("<color=#00ffff>Avatar Settings</color>")
                               ?? root.FindChild("Avatar Settings")
                               ?? root.AddSlot("<color=#00ffff>Avatar Settings</color>");
+        PublishAvatarSettingsRoot(avatarSettings);
+        await ImportAvatarGrabEquip(root, avatarSettings);
         Slot loadingDisplay = avatarSettings.AddSlot("Avatar Loading Display");
         Slot standIn = await ImportLoadingStandIn(loadingDisplay);
 
@@ -177,6 +180,98 @@ internal static class MeshLoadingSetup
             }
         }
         return standIn;
+    }
+
+    /// <summary>
+    /// Adds the supplied avatar grab/equip fix beneath the shared Avatar Settings root so its
+    /// modular_avatar bindings resolve alongside the generated dynamic-bone controls.
+    /// </summary>
+    private static async Task ImportAvatarGrabEquip(Slot avatarRoot, Slot avatarSettings)
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(),
+            "ResoPon_AvatarGrabEquip_" + Guid.NewGuid().ToString("N") + ".resonitepackage");
+        try
+        {
+            using (System.IO.Stream resource = typeof(MeshLoadingSetup).Assembly.GetManifestResourceStream(
+                       "VrmToResonitePackage.Resources.FixAvatarGrabEquip.resonitepackage"))
+            {
+                if (resource == null)
+                {
+                    throw new InvalidOperationException("Avatar grab/equip resource was not found.");
+                }
+
+                using FileStream file = File.Create(tempPath);
+                resource.CopyTo(file);
+            }
+
+            using RecordPackage package = RecordPackage.Decode(tempPath);
+            SkyFrost.Base.Record record = package.MainRecord
+                ?? throw new InvalidDataException("Avatar grab/equip package has no main record.");
+            string signature = RecordPackage.GetAssetSignature(new Uri(record.AssetURI));
+            using System.IO.Stream asset = package.ReadAsset(signature);
+            DataTreeDictionary graph = DataTreeConverter.LoadAuto(asset)
+                ?? throw new InvalidDataException("Avatar grab/equip package has no DataTree.");
+
+            await ConvertPackdbReferencesToResdb(graph, package, avatarSettings.Engine);
+            Slot packageRoot = avatarSettings.AddSlot("Avatar Grab & Equip");
+            packageRoot.LoadObject(graph, record);
+            ConnectAvatarGrabbable(packageRoot, avatarRoot);
+            packageRoot.ForeachComponentInChildren(delegate(IPackageImportEventReceiver receiver)
+            {
+                receiver.OnPackageImported();
+            }, includeLocal: false, cacheItems: true);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch
+            {
+                // Temp cleanup is best-effort.
+            }
+        }
+    }
+
+    private static void ConnectAvatarGrabbable(Slot packageRoot, Slot avatarRoot)
+    {
+        Grabbable avatarGrabbable = avatarRoot.GetComponent<Grabbable>();
+        if (avatarGrabbable == null)
+        {
+            UniLog.Warning("Avatar Grab & Equip was imported, but the avatar root has no Grabbable to assign.");
+            return;
+        }
+
+        List<ReferenceField<Grabbable>> emptyReferences = packageRoot
+            .GetComponentsInChildren<ReferenceField<Grabbable>>()
+            .Where(reference => reference.Reference.Target == null)
+            .ToList();
+        if (emptyReferences.Count != 1)
+        {
+            UniLog.Warning($"Avatar Grab & Equip expected one empty Grabbable ReferenceField, found {emptyReferences.Count}.");
+            return;
+        }
+
+        emptyReferences[0].Reference.Target = avatarGrabbable;
+    }
+
+    private static void PublishAvatarSettingsRoot(Slot avatarSettings)
+    {
+        if (avatarSettings.GetComponents<DynamicReferenceVariable<Slot>>().Any(variable =>
+                variable.VariableName.Value == AvatarSettingsRootVariable))
+        {
+            return;
+        }
+
+        ReferenceField<Slot> selfReference = avatarSettings.AttachComponent<ReferenceField<Slot>>();
+        selfReference.Reference.Target = avatarSettings;
+        DynamicReferenceVariable<Slot> settingsRoot = avatarSettings.AttachComponent<DynamicReferenceVariable<Slot>>();
+        settingsRoot.VariableName.Value = AvatarSettingsRootVariable;
+        settingsRoot.Reference.DriveFrom(selfReference.Reference);
     }
 
     private static async Task ConvertPackdbReferencesToResdb(
