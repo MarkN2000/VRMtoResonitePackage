@@ -171,6 +171,7 @@ internal sealed class CliOptions
     public bool NoExpressionMenu { get; set; }
     public bool DefaultUserScale { get; set; }
     public bool KeepWorkingFiles { get; set; }
+    public bool PointFilterTextures { get; set; }
     public float? ViewForward { get; set; }
     public float? ViewUp { get; set; }
     public float? NearClip { get; set; }
@@ -218,6 +219,9 @@ internal sealed class CliOptions
                     break;
                 case "--default-user-scale":
                     options.DefaultUserScale = true;
+                    break;
+                case "--point-filter-textures":
+                    options.PointFilterTextures = true;
                     break;
                 case "--inspect":
                     options.InspectMode = true;
@@ -311,6 +315,7 @@ internal sealed class CliOptions
         Console.WriteLine("  --no-protection          SimpleAvatarProtection（アバター保護）を付けない");
         Console.WriteLine("  --no-expression-menu     プリセット表情のコンテキストメニューを生成しない");
         Console.WriteLine("  --default-user-scale     DefaultUserScaleを付与（DefaultScale: 1）");
+        Console.WriteLine("  --point-filter-textures  すべてのアバターテクスチャをPointフィルターにする");
         Console.WriteLine("  --view-forward <m>       視点の前方オフセット（既定: 目間距離から自動）");
         Console.WriteLine("  --view-up <m>            視点の上方オフセット（既定: 目間距離から自動)");
         Console.WriteLine("  --near-clip <m>          AvatarRenderSettingsのNearClip（既定: 0.075、0で無効）");

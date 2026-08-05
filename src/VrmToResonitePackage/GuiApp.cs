@@ -566,6 +566,10 @@ internal sealed class MainWindow : Window
         {
             arguments.Add("--default-user-scale");
         }
+        if (options.PointFilterTextures)
+        {
+            arguments.Add("--point-filter-textures");
+        }
         if (options.KeepWorkingFiles)
         {
             arguments.Add("--keep-working-files");
@@ -884,6 +888,7 @@ internal sealed class SettingsWindow : Window
     private readonly CheckBox _defaultUserScale = new() { Content = AppLocalization.Get("KeepOriginalAvatarScale") };
     private readonly CheckBox _keepWorkingFiles = new() { Content = AppLocalization.Get("KeepWorkingFiles") };
     private readonly CheckBox _promptMtoonTransparentBlendMode = new() { Content = AppLocalization.Get("ChooseTransparentMode") };
+    private readonly CheckBox _pointFilterTextures = new() { Content = AppLocalization.Get("PointFilterTextures") };
     private readonly TextBox _viewForward = new();
     private readonly TextBox _viewUp = new();
     private readonly TextBox _nearClip = new();
@@ -931,6 +936,7 @@ internal sealed class SettingsWindow : Window
         panel.Children.Add(_noExpressionMenu);
         panel.Children.Add(_defaultUserScale);
         panel.Children.Add(_promptMtoonTransparentBlendMode);
+        panel.Children.Add(_pointFilterTextures);
         panel.Children.Add(_keepWorkingFiles);
         panel.Children.Add(Field(AppLocalization.Get("ViewForwardOffset"), _viewForward));
         panel.Children.Add(Field(AppLocalization.Get("ViewUpOffset"), _viewUp));
@@ -970,6 +976,7 @@ internal sealed class SettingsWindow : Window
         _noExpressionMenu.IsChecked = Settings.NoExpressionMenu;
         _defaultUserScale.IsChecked = Settings.DefaultUserScale;
         _promptMtoonTransparentBlendMode.IsChecked = Settings.PromptMtoonTransparentBlendMode;
+        _pointFilterTextures.IsChecked = Settings.PointFilterTextures;
         _keepWorkingFiles.IsChecked = Settings.KeepWorkingFiles;
         _viewForward.Text = Settings.ViewForward?.ToString(CultureInfo.InvariantCulture) ?? AutoValueText;
         _viewUp.Text = Settings.ViewUp?.ToString(CultureInfo.InvariantCulture) ?? AutoValueText;
@@ -989,6 +996,7 @@ internal sealed class SettingsWindow : Window
             Settings.NoExpressionMenu = _noExpressionMenu.IsChecked == true;
             Settings.DefaultUserScale = _defaultUserScale.IsChecked == true;
             Settings.PromptMtoonTransparentBlendMode = _promptMtoonTransparentBlendMode.IsChecked == true;
+            Settings.PointFilterTextures = _pointFilterTextures.IsChecked == true;
             Settings.KeepWorkingFiles = _keepWorkingFiles.IsChecked == true;
             if (_languageChanged && _language.SelectedItem is AppLocaleInfo locale)
             {
@@ -1309,6 +1317,7 @@ internal sealed class GuiSettings
     public bool DefaultUserScale { get; set; }
     public bool KeepWorkingFiles { get; set; }
     public bool PromptMtoonTransparentBlendMode { get; set; }
+    public bool PointFilterTextures { get; set; }
     public float? ViewForward { get; set; }
     public float? ViewUp { get; set; }
     public float? NearClip { get; set; }
@@ -1352,6 +1361,7 @@ internal sealed class GuiSettings
         DefaultUserScale = DefaultUserScale,
         KeepWorkingFiles = KeepWorkingFiles,
         PromptMtoonTransparentBlendMode = PromptMtoonTransparentBlendMode,
+        PointFilterTextures = PointFilterTextures,
         ViewForward = ViewForward,
         ViewUp = ViewUp,
         NearClip = NearClip,
@@ -1370,6 +1380,7 @@ internal sealed class GuiSettings
         DefaultUserScale = other.DefaultUserScale;
         KeepWorkingFiles = other.KeepWorkingFiles;
         PromptMtoonTransparentBlendMode = other.PromptMtoonTransparentBlendMode;
+        PointFilterTextures = other.PointFilterTextures;
         ViewForward = other.ViewForward;
         ViewUp = other.ViewUp;
         NearClip = other.NearClip;
@@ -1388,6 +1399,7 @@ internal sealed class GuiSettings
             NoExpressionMenu = NoExpressionMenu,
             DefaultUserScale = DefaultUserScale,
             KeepWorkingFiles = KeepWorkingFiles,
+            PointFilterTextures = PointFilterTextures,
             ViewForward = ViewForward,
             ViewUp = ViewUp,
             NearClip = NearClip,

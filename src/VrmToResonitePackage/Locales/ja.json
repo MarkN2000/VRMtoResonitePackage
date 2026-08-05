@@ -27,6 +27,7 @@
     "NoAvatarProtection": "アバター保護を付けない",
     "NoExpressionMenu": "表情メニューを生成しない",
     "KeepOriginalAvatarScale": "DefaultUserScaleを追加（値: 1）",
+    "PointFilterTextures": "すべてのアバターテクスチャをPointフィルターにする",
     "KeepWorkingFiles": "作業用一時ファイルを残す",
     "ChooseTransparentMode": "半透明マテリアルの変換先を手動で選ぶ",
     "ViewForwardOffset": "視点の前方オフセット(m)",

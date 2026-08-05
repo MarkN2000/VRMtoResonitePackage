@@ -1,6 +1,7 @@
 using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.Store;
+using Renderite.Shared;
 using SkyFrost.Base;
 using VrmToResonitePackage.Vrm;
 
@@ -254,6 +255,11 @@ internal static class Converter
                 }
 
                 VrmMetadataSetup.Apply(root, vrm);
+                if (options.PointFilterTextures)
+                {
+                    int changedCount = ApplyPointTextureFiltering(assetsSlot);
+                    UniLog.Log($"テクスチャのFilterModeをPointに設定しました: {changedCount}件");
+                }
                 await SetupThumbnail(root, assetsSlot, vrm, vrmPath);
 
                 await MeshLoadingSetup.Apply(root, options.DefaultUserScale && !options.NoAvatar);
@@ -262,6 +268,12 @@ internal static class Converter
                 for (int i = 0; i < 30; i++)
                 {
                     await default(NextUpdate);
+                }
+
+                if (options.PointFilterTextures)
+                {
+                    int changedCount = ApplyPointTextureFiltering(assetsSlot);
+                    UniLog.Log($"テクスチャのFilterModeをPointに設定しました: {changedCount}件");
                 }
 
                 root.Name = displayName;
@@ -838,6 +850,18 @@ internal static class Converter
                 yield return descendant;
             }
         }
+    }
+
+    private static int ApplyPointTextureFiltering(Slot assetsSlot)
+    {
+        int changedCount = 0;
+        foreach (StaticTexture2D texture in assetsSlot.GetComponentsInChildren<StaticTexture2D>())
+        {
+            texture.FilterMode.Value = TextureFilterMode.Point;
+            changedCount++;
+        }
+
+        return changedCount;
     }
 
     /// <summary>
