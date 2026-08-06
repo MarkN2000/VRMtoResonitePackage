@@ -566,6 +566,14 @@ internal sealed class MainWindow : Window
         {
             arguments.Add("--default-user-scale");
         }
+        if (options.GenerateFirstPersonVisibility)
+        {
+            arguments.Add("--first-person-visibility");
+        }
+        if (!options.GenerateAvatarLoadingDisplay)
+        {
+            arguments.Add("--no-avatar-loading-display");
+        }
         if (options.PointFilterTextures)
         {
             arguments.Add("--point-filter-textures");
@@ -886,6 +894,8 @@ internal sealed class SettingsWindow : Window
     private readonly CheckBox _noProtection = new() { Content = AppLocalization.Get("NoAvatarProtection") };
     private readonly CheckBox _noExpressionMenu = new() { Content = AppLocalization.Get("NoExpressionMenu") };
     private readonly CheckBox _defaultUserScale = new() { Content = AppLocalization.Get("KeepOriginalAvatarScale") };
+    private readonly CheckBox _generateFirstPersonVisibility = new() { Content = AppLocalization.Get("GenerateFirstPersonVisibility") };
+    private readonly CheckBox _generateAvatarLoadingDisplay = new() { Content = AppLocalization.Get("GenerateAvatarLoadingDisplay") };
     private readonly CheckBox _keepWorkingFiles = new() { Content = AppLocalization.Get("KeepWorkingFiles") };
     private readonly CheckBox _promptMtoonTransparentBlendMode = new() { Content = AppLocalization.Get("ChooseTransparentMode") };
     private readonly CheckBox _pointFilterTextures = new() { Content = AppLocalization.Get("PointFilterTextures") };
@@ -935,6 +945,8 @@ internal sealed class SettingsWindow : Window
         panel.Children.Add(_noProtection);
         panel.Children.Add(_noExpressionMenu);
         panel.Children.Add(_defaultUserScale);
+        panel.Children.Add(_generateFirstPersonVisibility);
+        panel.Children.Add(_generateAvatarLoadingDisplay);
         panel.Children.Add(_promptMtoonTransparentBlendMode);
         panel.Children.Add(_pointFilterTextures);
         panel.Children.Add(_keepWorkingFiles);
@@ -975,6 +987,8 @@ internal sealed class SettingsWindow : Window
         _noProtection.IsChecked = Settings.NoProtection;
         _noExpressionMenu.IsChecked = Settings.NoExpressionMenu;
         _defaultUserScale.IsChecked = Settings.DefaultUserScale;
+        _generateFirstPersonVisibility.IsChecked = Settings.GenerateFirstPersonVisibility;
+        _generateAvatarLoadingDisplay.IsChecked = Settings.GenerateAvatarLoadingDisplay;
         _promptMtoonTransparentBlendMode.IsChecked = Settings.PromptMtoonTransparentBlendMode;
         _pointFilterTextures.IsChecked = Settings.PointFilterTextures;
         _keepWorkingFiles.IsChecked = Settings.KeepWorkingFiles;
@@ -995,6 +1009,8 @@ internal sealed class SettingsWindow : Window
             Settings.NoProtection = _noProtection.IsChecked == true;
             Settings.NoExpressionMenu = _noExpressionMenu.IsChecked == true;
             Settings.DefaultUserScale = _defaultUserScale.IsChecked == true;
+            Settings.GenerateFirstPersonVisibility = _generateFirstPersonVisibility.IsChecked == true;
+            Settings.GenerateAvatarLoadingDisplay = _generateAvatarLoadingDisplay.IsChecked == true;
             Settings.PromptMtoonTransparentBlendMode = _promptMtoonTransparentBlendMode.IsChecked == true;
             Settings.PointFilterTextures = _pointFilterTextures.IsChecked == true;
             Settings.KeepWorkingFiles = _keepWorkingFiles.IsChecked == true;
@@ -1315,6 +1331,8 @@ internal sealed class GuiSettings
     public bool NoProtection { get; set; }
     public bool NoExpressionMenu { get; set; }
     public bool DefaultUserScale { get; set; }
+    public bool GenerateFirstPersonVisibility { get; set; }
+    public bool GenerateAvatarLoadingDisplay { get; set; } = true;
     public bool KeepWorkingFiles { get; set; }
     public bool PromptMtoonTransparentBlendMode { get; set; }
     public bool PointFilterTextures { get; set; }
@@ -1359,6 +1377,8 @@ internal sealed class GuiSettings
         NoProtection = NoProtection,
         NoExpressionMenu = NoExpressionMenu,
         DefaultUserScale = DefaultUserScale,
+        GenerateFirstPersonVisibility = GenerateFirstPersonVisibility,
+        GenerateAvatarLoadingDisplay = GenerateAvatarLoadingDisplay,
         KeepWorkingFiles = KeepWorkingFiles,
         PromptMtoonTransparentBlendMode = PromptMtoonTransparentBlendMode,
         PointFilterTextures = PointFilterTextures,
@@ -1378,6 +1398,8 @@ internal sealed class GuiSettings
         NoProtection = other.NoProtection;
         NoExpressionMenu = other.NoExpressionMenu;
         DefaultUserScale = other.DefaultUserScale;
+        GenerateFirstPersonVisibility = other.GenerateFirstPersonVisibility;
+        GenerateAvatarLoadingDisplay = other.GenerateAvatarLoadingDisplay;
         KeepWorkingFiles = other.KeepWorkingFiles;
         PromptMtoonTransparentBlendMode = other.PromptMtoonTransparentBlendMode;
         PointFilterTextures = other.PointFilterTextures;
@@ -1398,6 +1420,8 @@ internal sealed class GuiSettings
             NoProtection = NoProtection,
             NoExpressionMenu = NoExpressionMenu,
             DefaultUserScale = DefaultUserScale,
+            GenerateFirstPersonVisibility = GenerateFirstPersonVisibility,
+            GenerateAvatarLoadingDisplay = GenerateAvatarLoadingDisplay,
             KeepWorkingFiles = KeepWorkingFiles,
             PointFilterTextures = PointFilterTextures,
             ViewForward = ViewForward,

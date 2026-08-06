@@ -22,6 +22,21 @@ VRMアバターを **.resonitepackage** に変換するWindows用ツールです
   - **揺れもの**: VRMスプリングボーン → DynamicBoneChain変換（コライダー込み）
   - **マテリアル**: MToonのマテリアル設定を極力忠実にXiexeToonに反映。
 
+### 表示制御オプション
+
+- **一人称で一部メッシュを非表示にする**（既定: オフ）: VRM FirstPerson 注釈を
+  `RenderMaterialOverride` と `modular_avatar/AvatarWornLocal` で反映します。
+  Modular Avatar 側の不具合の影響を避けるため、必要な場合だけ有効にしてください。
+  CLI では `--first-person-visibility` で有効にできます。
+- **読み込み中にアイコンを表示する**（既定: オン）:
+  `MeshRendererLoadStatus`、`modular_avatar/MeshNotLoaded`、各 Renderer の有効状態ドライバーと
+  `Avatar Loading Display` を生成します。CLI では `--no-avatar-loading-display` で無効にできます。
+
+2つのオプションを両方オフにした場合、FirstPerson 用の `RenderMaterialOverride`、
+`Invisible Material`、headless mesh、Loading Display、読み込み状態コンポーネント、
+`Avatar Root Identification` は出力されません。揺れものがある場合の DynamicBone 用
+`modular_avatar` 設定、`DefaultUserScale`、Avatar Grab & Equip 修正は各機能の条件に従って残ります。
+
 ## 必要環境
 
 - Windows + .NET 10 ランタイム

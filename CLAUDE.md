@@ -204,6 +204,13 @@ Y180∘FlipX＝Z 鏡映で**体・頭が前後逆・腕は左右(X)保持**に�
   上書き可。
 - **AvatarRenderSettings**: ルート直下に作り **NearClip=0.075、FarClip=null**（前髪が一人称視点を
   遮る問題の回避）。`--near-clip` で変更可（0 で無効）。
+- **VRM FirstPerson 表示制御は既定で生成しない**。Modular Avatar の
+  `RenderMaterialOverride` の不具合を回避するため、GUI の「一人称で一部メッシュを非表示にする」または
+  `--first-person-visibility` で明示的に有効化した場合だけ生成する。
+- **Avatar Loading Display は既定で生成する**。GUI の
+  「読み込み中にアイコンを表示する」または
+  `--no-avatar-loading-display` で、`MeshRendererLoadStatus`、`MeshNotLoaded`、Renderer ドライバー、
+  stand-in をまとめて無効化する。`DefaultUserScale` と Avatar Grab & Equip 修正はこの設定から独立させる。
 - **EyeRotationDriver.MaxSwing=4**（既定 15 は VRM には大きすぎて目が突き抜ける）。
 - **ビセーム/瞬き**: Resonite の名前推測（`EnsureVoiceOutput` 内の `TrySetupVisemes`）を
   **完全バイパス**し、VRM Expression のバインドのみで設定。`DirectVisemeDriver` は Aa/Ih/Ou/Ee/Oh の
@@ -373,12 +380,20 @@ VRM に加え、VRChat アバター入りの `.unitypackage` も変換できる�
 - VRM0 and VRM1 store mesh annotations differently. VRM0 uses `extensions.VRM.firstPerson.meshAnnotations[].mesh` and `firstPersonFlag`. VRM1 uses `extensions.VRMC_vrm.firstPerson.meshAnnotations[].node` and `type`; resolve the node to its glTF mesh index via `VrmModel.NodeMeshIndices`.
 - Missing mesh annotations are not `Both`. UniVRM treats renderers without an explicit annotation as `Auto`, so the parser must add default `Auto` annotations for unannotated VRM0 meshes and unannotated VRM1 mesh nodes.
 - `Both` intentionally does nothing.
-- `ThirdPersonOnly` and `FirstPersonOnly` are implemented with `RenderMaterialOverride`, not by toggling renderer enabled state. Keep the ModularAvatar-compatible names and structure: `DynamicVariableSpace.SpaceName = "modular_avatar"`, `OnlyDirectBinding = true`, and `DynamicValueVariableDriver<bool>.VariableName = "modular_avatar/AvatarWornLocal"`.
-- The wearer check is not constructed manually in code. Import the embedded `Resources/AvatarRootIdentification.resonitepackage` as a child of the avatar root. This package contains the same packed ProtoFlux structure ModularAvatar uses (`Check Avatar Worn`, `GetActiveUser`, `IsLocalUser`, `UserInput`, etc.). Do not replace it with a `LocalUpdate` value writer; undriven dynamic variables are global in Resonite and that changes behavior.
+- First-person visibility generation is opt-in because of the current Modular Avatar `RenderMaterialOverride` bug. Guard both the synchronous `SetupFirstPersonVisibility` path and the post-material `ApplyFirstPersonAutoAsync` path with the same option; guarding only one path is incorrect.
+- When enabled, `ThirdPersonOnly` and `FirstPersonOnly` are implemented with `RenderMaterialOverride`, not by toggling renderer enabled state. Keep the ModularAvatar-compatible names and structure: `DynamicVariableSpace.SpaceName = "modular_avatar"`, `OnlyDirectBinding = true`, and `DynamicValueVariableDriver<bool>.VariableName = "modular_avatar/AvatarWornLocal"`.
+- The wearer check is not constructed manually in code. Import the embedded `Resources/AvatarRootIdentification.resonitepackage` at most once as a child of the avatar root when either first-person visibility or Avatar Loading Display needs it. This package publishes both `modular_avatar/AvatarWornLocal` and `modular_avatar/AvatarWorn`; the loading stand-in reads `AvatarWorn`, not `AvatarWornLocal`. Do not replace it with a `LocalUpdate` value writer; undriven dynamic variables are global in Resonite and that changes behavior.
 - The invisible material must stay compatible with ModularAvatar: create/reuse an `Assets/Invisible Material` slot with a `PBS_RimSpecular` material, transparent enabled, and zero alpha/color.
 - `Auto` follows UniVRM headless mesh behavior. For skinned renderers, find the first-person/head bone, collect renderer bone indices whose slots are descendants of that bone, clone the `MeshX`, and remove any triangle where any vertex has a positive weight for one of those bones. If no erase bones are present, do nothing, matching `Both`.
 - For `Auto` skinned renderers, the original renderer becomes third-person only. The generated `_headless_<renderer>` renderer uses the erased mesh and same bones, but deliberately strips blendshapes and does not copy `BlendShapeWeights`, matching UniVRM's `BoneMeshEraser` behavior. Material overrides make it visible only in `RenderingContext.UserView` while the avatar is worn locally. Its default materials should be invisible to avoid double rendering in other contexts.
 - Run `ApplyFirstPersonAutoAsync` after `MaterialTuner.Apply`, so the headless renderer references the tuned final materials, not importer placeholders.
+
+## Avatar Loading Display notes
+
+- The loading option controls the whole loading guard, not only the visible stand-in. When disabled, do not generate `MeshRendererLoadStatus`, `modular_avatar/MeshNotLoaded`, renderer `DynamicValueVariableDriver<bool>` components, head pose variables, or `Avatar Loading Display`.
+- Keep Avatar Settings creation, optional `DefaultUserScale`, and the embedded Avatar Grab & Equip fix independent from the loading option.
+- Import `AvatarRootIdentification` when either first-person visibility or loading actually uses it. If both are disabled, omit it. Do not introduce a second reduced binary package only to remove an unused `AvatarWornLocal` publisher.
+- Create/publish the `modular_avatar` DynamicVariable space only when first-person visibility, loading, or DynamicBone setup needs it. DynamicBone variables remain independent from both display options.
 
 ## VRChat FBX prefab notes
 

@@ -240,6 +240,7 @@ internal static class Converter
                         FaceTracking = options.FaceTracking,
                         Protect = !options.NoProtection,
                         ExpressionMenu = !options.NoExpressionMenu,
+                        GenerateFirstPersonVisibility = options.GenerateFirstPersonVisibility,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -250,7 +251,10 @@ internal static class Converter
                     AvatarSetup.Build(root, vrm, setupOptions);
                     await MaterialTuner.Apply(root, assetsSlot, vrm, vrmPath,
                         options.MtoonTransparentAlphaMaterials);
-                    await AvatarSetup.ApplyFirstPersonAutoAsync(root, vrm);
+                    if (options.GenerateFirstPersonVisibility)
+                    {
+                        await AvatarSetup.ApplyFirstPersonAutoAsync(root, vrm);
+                    }
                     SpringBoneSetup.Apply(root, vrm);
                 }
 
@@ -262,7 +266,12 @@ internal static class Converter
                 }
                 await SetupThumbnail(root, assetsSlot, vrm, vrmPath);
 
-                await MeshLoadingSetup.Apply(root, options.DefaultUserScale && !options.NoAvatar);
+                Slot avatarSettings = await AvatarSettingsSetup.Apply(
+                    root, options.DefaultUserScale && !options.NoAvatar);
+                if (options.GenerateAvatarLoadingDisplay)
+                {
+                    await AvatarLoadingSetup.Apply(root, avatarSettings);
+                }
 
                 // Let deferred import tasks (alpha detection, normal map detection, ...) settle.
                 for (int i = 0; i < 30; i++)
@@ -466,6 +475,7 @@ internal static class Converter
                         Protect = !options.NoProtection,
                         // VRChat expressions live in Animator/menu layers, out of scope: visemes + blink only.
                         ExpressionMenu = false,
+                        GenerateFirstPersonVisibility = options.GenerateFirstPersonVisibility,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -481,7 +491,12 @@ internal static class Converter
                 // Reflect prefab-authored scene state (inactive GameObjects, initial blendshape weights).
                 Vrchat.VrchatSceneSetup.Apply(root, avatar);
 
-                await MeshLoadingSetup.Apply(root, options.DefaultUserScale && !options.NoAvatar);
+                Slot avatarSettings = await AvatarSettingsSetup.Apply(
+                    root, options.DefaultUserScale && !options.NoAvatar);
+                if (options.GenerateAvatarLoadingDisplay)
+                {
+                    await AvatarLoadingSetup.Apply(root, avatarSettings);
+                }
 
                 for (int i = 0; i < 30; i++)
                 {

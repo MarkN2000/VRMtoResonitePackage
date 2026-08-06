@@ -17,6 +17,9 @@ internal sealed class AvatarSetupOptions
     /// <summary>Generate the wearer-facing preset-expression context menu.</summary>
     public bool ExpressionMenu { get; set; } = true;
 
+    /// <summary>Generate VRM FirstPerson visibility controls that use RenderMaterialOverride.</summary>
+    public bool GenerateFirstPersonVisibility { get; set; }
+
     /// <summary>View offset forward from the eye midpoint, in meters. Null = auto (eye-distance scaled).</summary>
     public float? ViewForward { get; set; }
 
@@ -206,7 +209,10 @@ internal static class AvatarSetup
             ExpressionMenuSetup.Setup(root, vrm);
         }
         SetupAwayIndicator(root);
-        SetupFirstPersonVisibility(root, vrm);
+        if (options.GenerateFirstPersonVisibility)
+        {
+            SetupFirstPersonVisibility(root, vrm);
+        }
 
         root.GetComponentInChildren((AvatarPoseNode n) => n.Node.Value == BodyNode.Head)?.InstrumentWithViewHeadOverride();
         UniLog.Log("アバターセットアップ完了。");
@@ -724,8 +730,7 @@ internal static class AvatarSetup
 
     // ---------------------------------------------------------------- first-person visibility
 
-    private const string ModularAvatarNamespace = "modular_avatar";
-    private const string AvatarWornLocalVariable = ModularAvatarNamespace + "/AvatarWornLocal";
+    private const string AvatarWornLocalVariable = ModularAvatarSetup.SpaceName + "/AvatarWornLocal";
 
     private static readonly RenderingContext[] ThirdPersonRenderContexts =
     {
@@ -766,12 +771,8 @@ internal static class AvatarSetup
             return;
         }
 
-        DynamicVariableSpace space = root.GetComponent<DynamicVariableSpace>()
-                                     ?? root.AttachComponent<DynamicVariableSpace>();
-        space.SpaceName.Value = ModularAvatarNamespace;
-        space.OnlyDirectBinding.Value = true;
-
-        ImportAvatarRootIdentification(root);
+        ModularAvatarSetup.EnsureDynamicVariableSpace(root);
+        ModularAvatarSetup.EnsureAvatarRootIdentification(root);
 
         IAssetProvider<FrooxEngine.Material> invisibleMaterial = GetOrCreateInvisibleMaterial(root);
         int configured = 0;
@@ -815,12 +816,8 @@ internal static class AvatarSetup
             return;
         }
 
-        DynamicVariableSpace space = root.GetComponent<DynamicVariableSpace>()
-                                     ?? root.AttachComponent<DynamicVariableSpace>();
-        space.SpaceName.Value = ModularAvatarNamespace;
-        space.OnlyDirectBinding.Value = true;
-
-        ImportAvatarRootIdentification(root);
+        ModularAvatarSetup.EnsureDynamicVariableSpace(root);
+        ModularAvatarSetup.EnsureAvatarRootIdentification(root);
 
         Dictionary<string, Slot> slotsByName = SlotIndex.Build(root);
         Slot firstPersonBone = ResolveFirstPersonBone(root, vrm, slotsByName);
@@ -1098,74 +1095,6 @@ internal static class AvatarSetup
                 {
                     yield return slot;
                 }
-            }
-        }
-    }
-
-    private static void ImportAvatarRootIdentification(Slot root)
-    {
-        if (root.FindChild("Avatar Root Identification") != null)
-        {
-            return;
-        }
-
-        string tempPath = Path.Combine(Path.GetTempPath(),
-            "ResoPon_AvatarRootIdentification_" + Guid.NewGuid().ToString("N") + ".resonitepackage");
-        try
-        {
-            using (System.IO.Stream resource = typeof(AvatarSetup).Assembly.GetManifestResourceStream(
-                       "VrmToResonitePackage.Resources.AvatarRootIdentification.resonitepackage"))
-            {
-                if (resource == null)
-                {
-                    UniLog.Warning("Avatar Root Identification resource が見つかりませんでした。VRM FirstPerson の装着判定をスキップします。");
-                    return;
-                }
-
-                using FileStream file = File.Create(tempPath);
-                resource.CopyTo(file);
-            }
-
-            using RecordPackage package = RecordPackage.Decode(tempPath);
-            SkyFrost.Base.Record record = package.MainRecord;
-            if (record == null)
-            {
-                UniLog.Warning("Avatar Root Identification package に main record がありません。VRM FirstPerson の装着判定をスキップします。");
-                return;
-            }
-
-            string signature = RecordPackage.GetAssetSignature(new Uri(record.AssetURI));
-            using System.IO.Stream asset = package.ReadAsset(signature);
-            DataTreeDictionary graph = DataTreeConverter.LoadAuto(asset);
-            if (graph == null)
-            {
-                UniLog.Warning("Avatar Root Identification package の DataTree を読み込めませんでした。VRM FirstPerson の装着判定をスキップします。");
-                return;
-            }
-
-            Slot packageRoot = root.AddSlot("Avatar Root Identification");
-            packageRoot.LoadObject(graph, record);
-            packageRoot.ForeachComponentInChildren(delegate(IPackageImportEventReceiver receiver)
-            {
-                receiver.OnPackageImported();
-            }, includeLocal: false, cacheItems: true);
-        }
-        catch (Exception ex)
-        {
-            UniLog.Warning($"Avatar Root Identification package の読み込みに失敗しました。VRM FirstPerson の装着判定をスキップします: {ex.Message}");
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(tempPath))
-                {
-                    File.Delete(tempPath);
-                }
-            }
-            catch
-            {
-                // Temp cleanup is best-effort.
             }
         }
     }
