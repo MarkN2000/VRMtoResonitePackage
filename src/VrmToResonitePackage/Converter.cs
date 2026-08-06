@@ -241,6 +241,7 @@ internal static class Converter
                         Protect = !options.NoProtection,
                         ExpressionMenu = !options.NoExpressionMenu,
                         GenerateFirstPersonVisibility = options.GenerateFirstPersonVisibility,
+                        CorrectViewpointToMeshSurface = options.CorrectViewpointToMeshSurface,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -248,7 +249,7 @@ internal static class Converter
                     {
                         setupOptions.NearClip = options.NearClip.Value;
                     }
-                    AvatarSetup.Build(root, vrm, setupOptions);
+                    await AvatarSetup.BuildAsync(root, vrm, setupOptions);
                     await MaterialTuner.Apply(root, assetsSlot, vrm, vrmPath,
                         options.MtoonTransparentAlphaMaterials);
                     if (options.GenerateFirstPersonVisibility)
@@ -461,6 +462,11 @@ internal static class Converter
                 Vrchat.VrchatSceneSetup.RemoveDeletedMeshes(root, avatar);
                 Vrchat.VrchatSceneSetup.ApplyModularAvatar(root, avatar);
 
+                // 非アクティブな衣装やアクセサリーが視点を動かさないよう、prefab の表示状態を
+                // 視点補正より先に反映する。GetComponentsInChildren は非アクティブな Renderer も
+                // 取得するため、後続処理は Resonite 内で有効化された場合に備えて設定を続行できる。
+                Vrchat.VrchatSceneSetup.ApplyInactiveStates(root, avatar);
+
                 if (options.NoAvatar)
                 {
                     await Vrchat.VrchatMaterialBuilder.Apply(root, assetsSlot, avatar, package);
@@ -476,6 +482,7 @@ internal static class Converter
                         // VRChat expressions live in Animator/menu layers, out of scope: visemes + blink only.
                         ExpressionMenu = false,
                         GenerateFirstPersonVisibility = options.GenerateFirstPersonVisibility,
+                        CorrectViewpointToMeshSurface = options.CorrectViewpointToMeshSurface,
                         ViewForward = options.ViewForward,
                         ViewUp = options.ViewUp,
                     };
@@ -483,13 +490,10 @@ internal static class Converter
                     {
                         setupOptions.NearClip = options.NearClip.Value;
                     }
-                    AvatarSetup.Build(root, model, setupOptions);
+                    await AvatarSetup.BuildAsync(root, model, setupOptions);
                     await Vrchat.VrchatMaterialBuilder.Apply(root, assetsSlot, avatar, package);
                     SpringBoneSetup.Apply(root, model);
                 }
-
-                // Reflect prefab-authored scene state (inactive GameObjects, initial blendshape weights).
-                Vrchat.VrchatSceneSetup.Apply(root, avatar);
 
                 Slot avatarSettings = await AvatarSettingsSetup.Apply(
                     root, options.DefaultUserScale && !options.NoAvatar);

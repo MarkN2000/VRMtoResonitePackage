@@ -20,6 +20,9 @@ internal sealed class AvatarSetupOptions
     /// <summary>Generate VRM FirstPerson visibility controls that use RenderMaterialOverride.</summary>
     public bool GenerateFirstPersonVisibility { get; set; }
 
+    /// <summary>計算済みの視点を、前方にある最も近い有効なメッシュ面まで移動する。</summary>
+    public bool CorrectViewpointToMeshSurface { get; set; } = true;
+
     /// <summary>View offset forward from the eye midpoint, in meters. Null = auto (eye-distance scaled).</summary>
     public float? ViewForward { get; set; }
 
@@ -98,7 +101,7 @@ internal static class AvatarSetup
         ["rightLittleDistal"] = BodyNode.RightPinky_Distal,
     };
 
-    public static void Build(Slot root, VrmModel vrm, AvatarSetupOptions options)
+    public static async Task BuildAsync(Slot root, VrmModel vrm, AvatarSetupOptions options)
     {
         Dictionary<string, Slot> slotsByName = SlotIndex.Build(root);
 
@@ -127,7 +130,12 @@ internal static class AvatarSetup
         try
         {
             Slot headsetRef = refs.AddSlot("Headset");
-            headsetRef.GlobalPosition = ComputeEyePosition(rig, vrm, up, forward, options);
+            float3 eyePosition = ComputeEyePosition(rig, vrm, up, forward, options);
+            if (options.CorrectViewpointToMeshSurface)
+            {
+                eyePosition = await ViewpointSurfaceCorrection.Apply(root, eyePosition, forward);
+            }
+            headsetRef.GlobalPosition = eyePosition;
             headsetRef.GlobalRotation = floatQ.LookRotation(forward, up);
 
             Slot leftRef = refs.AddSlot("LeftHand");
@@ -286,10 +294,8 @@ internal static class AvatarSetup
     // ---------------------------------------------------------------- alignment
 
     /// <summary>
-    /// Computes the first-person view position. The raw eye-bone midpoint sits inside
-    /// the face mesh, so the view is pushed out to roughly the glabella (between the
-    /// eyebrows, on the face surface) — the common convention for Resonite avatars.
-    /// The offsets scale with the distance between the eye bones unless overridden.
+    /// 一人称視点の基準位置を計算する。目ボーンの中点から眉間付近へ移動し、明示値がなければ
+    /// 目間距離に比例した前方・上方オフセットを使う。実際のメッシュ面への補正はこの後に行う。
     /// </summary>
     private static float3 ComputeEyePosition(BipedRig rig, VrmModel vrm, float3 up, float3 forward,
         AvatarSetupOptions options)

@@ -172,6 +172,7 @@ internal sealed class CliOptions
     public bool DefaultUserScale { get; set; }
     public bool GenerateFirstPersonVisibility { get; set; }
     public bool GenerateAvatarLoadingDisplay { get; set; } = true;
+    public bool CorrectViewpointToMeshSurface { get; set; } = true;
     public bool KeepWorkingFiles { get; set; }
     public bool PointFilterTextures { get; set; }
     public float? ViewForward { get; set; }
@@ -227,6 +228,9 @@ internal sealed class CliOptions
                     break;
                 case "--no-avatar-loading-display":
                     options.GenerateAvatarLoadingDisplay = false;
+                    break;
+                case "--no-view-surface-correction":
+                    options.CorrectViewpointToMeshSurface = false;
                     break;
                 case "--point-filter-textures":
                     options.PointFilterTextures = true;
@@ -325,6 +329,7 @@ internal sealed class CliOptions
         Console.WriteLine("  --default-user-scale     DefaultUserScaleを付与（DefaultScale: 1）");
         Console.WriteLine("  --first-person-visibility  VRMの一人称表示制御を生成（既定: 無効）");
         Console.WriteLine("  --no-avatar-loading-display  読み込み中のメッシュ非表示と代替表示を生成しない");
+        Console.WriteLine("  --no-view-surface-correction  視点を前方のメッシュ表面へ移動しない");
         Console.WriteLine("  --point-filter-textures  すべてのアバターテクスチャをPointフィルターにする");
         Console.WriteLine("  --view-forward <m>       視点の前方オフセット（既定: 目間距離から自動）");
         Console.WriteLine("  --view-up <m>            視点の上方オフセット（既定: 目間距離から自動)");

@@ -29,6 +29,7 @@
     "KeepOriginalAvatarScale": "Add DefaultUserScale (value: 1)",
     "GenerateFirstPersonVisibility": "Hide selected meshes in first person",
     "GenerateAvatarLoadingDisplay": "Show an icon while loading",
+    "CorrectViewpointToMeshSurface": "Move the viewpoint forward to the mesh surface",
     "PointFilterTextures": "Set all avatar textures to Point filtering",
     "KeepWorkingFiles": "Keep temporary working files",
     "ChooseTransparentMode": "Choose how to convert transparent materials",

@@ -10,12 +10,6 @@ namespace VrmToResonitePackage.Vrchat;
 /// </summary>
 internal static class VrchatSceneSetup
 {
-    public static void Apply(Slot root, VrchatAvatar avatar)
-    {
-        ApplyInactiveStates(root, avatar);
-        ApplyInitialBlendShapes(root, avatar);
-    }
-
     /// <summary>
     /// Removes imported meshes that the selected prefab deleted. Ukon-style avatars share one FBX
     /// across several prefabs, each built by deleting mesh GameObjects in Unity; the FBX import
@@ -320,7 +314,7 @@ internal static class VrchatSceneSetup
     private static bool HasRendererInSubtree(Slot slot)
         => slot.GetComponentsInChildren<MeshRenderer>().Any();
 
-    private static void ApplyInactiveStates(Slot root, VrchatAvatar avatar)
+    public static void ApplyInactiveStates(Slot root, VrchatAvatar avatar)
     {
         if (avatar.InactiveGameObjects.Count == 0)
         {

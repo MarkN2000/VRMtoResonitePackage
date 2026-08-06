@@ -574,6 +574,10 @@ internal sealed class MainWindow : Window
         {
             arguments.Add("--no-avatar-loading-display");
         }
+        if (!options.CorrectViewpointToMeshSurface)
+        {
+            arguments.Add("--no-view-surface-correction");
+        }
         if (options.PointFilterTextures)
         {
             arguments.Add("--point-filter-textures");
@@ -896,6 +900,7 @@ internal sealed class SettingsWindow : Window
     private readonly CheckBox _defaultUserScale = new() { Content = AppLocalization.Get("KeepOriginalAvatarScale") };
     private readonly CheckBox _generateFirstPersonVisibility = new() { Content = AppLocalization.Get("GenerateFirstPersonVisibility") };
     private readonly CheckBox _generateAvatarLoadingDisplay = new() { Content = AppLocalization.Get("GenerateAvatarLoadingDisplay") };
+    private readonly CheckBox _correctViewpointToMeshSurface = new() { Content = AppLocalization.Get("CorrectViewpointToMeshSurface") };
     private readonly CheckBox _keepWorkingFiles = new() { Content = AppLocalization.Get("KeepWorkingFiles") };
     private readonly CheckBox _promptMtoonTransparentBlendMode = new() { Content = AppLocalization.Get("ChooseTransparentMode") };
     private readonly CheckBox _pointFilterTextures = new() { Content = AppLocalization.Get("PointFilterTextures") };
@@ -947,6 +952,7 @@ internal sealed class SettingsWindow : Window
         panel.Children.Add(_defaultUserScale);
         panel.Children.Add(_generateFirstPersonVisibility);
         panel.Children.Add(_generateAvatarLoadingDisplay);
+        panel.Children.Add(_correctViewpointToMeshSurface);
         panel.Children.Add(_promptMtoonTransparentBlendMode);
         panel.Children.Add(_pointFilterTextures);
         panel.Children.Add(_keepWorkingFiles);
@@ -989,6 +995,7 @@ internal sealed class SettingsWindow : Window
         _defaultUserScale.IsChecked = Settings.DefaultUserScale;
         _generateFirstPersonVisibility.IsChecked = Settings.GenerateFirstPersonVisibility;
         _generateAvatarLoadingDisplay.IsChecked = Settings.GenerateAvatarLoadingDisplay;
+        _correctViewpointToMeshSurface.IsChecked = Settings.CorrectViewpointToMeshSurface;
         _promptMtoonTransparentBlendMode.IsChecked = Settings.PromptMtoonTransparentBlendMode;
         _pointFilterTextures.IsChecked = Settings.PointFilterTextures;
         _keepWorkingFiles.IsChecked = Settings.KeepWorkingFiles;
@@ -1011,6 +1018,7 @@ internal sealed class SettingsWindow : Window
             Settings.DefaultUserScale = _defaultUserScale.IsChecked == true;
             Settings.GenerateFirstPersonVisibility = _generateFirstPersonVisibility.IsChecked == true;
             Settings.GenerateAvatarLoadingDisplay = _generateAvatarLoadingDisplay.IsChecked == true;
+            Settings.CorrectViewpointToMeshSurface = _correctViewpointToMeshSurface.IsChecked == true;
             Settings.PromptMtoonTransparentBlendMode = _promptMtoonTransparentBlendMode.IsChecked == true;
             Settings.PointFilterTextures = _pointFilterTextures.IsChecked == true;
             Settings.KeepWorkingFiles = _keepWorkingFiles.IsChecked == true;
@@ -1333,6 +1341,7 @@ internal sealed class GuiSettings
     public bool DefaultUserScale { get; set; }
     public bool GenerateFirstPersonVisibility { get; set; }
     public bool GenerateAvatarLoadingDisplay { get; set; } = true;
+    public bool CorrectViewpointToMeshSurface { get; set; } = true;
     public bool KeepWorkingFiles { get; set; }
     public bool PromptMtoonTransparentBlendMode { get; set; }
     public bool PointFilterTextures { get; set; }
@@ -1379,6 +1388,7 @@ internal sealed class GuiSettings
         DefaultUserScale = DefaultUserScale,
         GenerateFirstPersonVisibility = GenerateFirstPersonVisibility,
         GenerateAvatarLoadingDisplay = GenerateAvatarLoadingDisplay,
+        CorrectViewpointToMeshSurface = CorrectViewpointToMeshSurface,
         KeepWorkingFiles = KeepWorkingFiles,
         PromptMtoonTransparentBlendMode = PromptMtoonTransparentBlendMode,
         PointFilterTextures = PointFilterTextures,
@@ -1400,6 +1410,7 @@ internal sealed class GuiSettings
         DefaultUserScale = other.DefaultUserScale;
         GenerateFirstPersonVisibility = other.GenerateFirstPersonVisibility;
         GenerateAvatarLoadingDisplay = other.GenerateAvatarLoadingDisplay;
+        CorrectViewpointToMeshSurface = other.CorrectViewpointToMeshSurface;
         KeepWorkingFiles = other.KeepWorkingFiles;
         PromptMtoonTransparentBlendMode = other.PromptMtoonTransparentBlendMode;
         PointFilterTextures = other.PointFilterTextures;
@@ -1422,6 +1433,7 @@ internal sealed class GuiSettings
             DefaultUserScale = DefaultUserScale,
             GenerateFirstPersonVisibility = GenerateFirstPersonVisibility,
             GenerateAvatarLoadingDisplay = GenerateAvatarLoadingDisplay,
+            CorrectViewpointToMeshSurface = CorrectViewpointToMeshSurface,
             KeepWorkingFiles = KeepWorkingFiles,
             PointFilterTextures = PointFilterTextures,
             ViewForward = ViewForward,

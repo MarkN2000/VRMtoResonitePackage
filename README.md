@@ -14,7 +14,7 @@ VRMアバターを **.resonitepackage** に変換するWindows用ツールです
   - **ヒューマノイドリグ**: VRMのhumanoidボーンマップから正確にBipedRigを構築（名前推測に頼らない）
   - **視線・まばたき**: VRMのexpression（blink/blinkLeft/blinkRight）から目のセットアップ
     EyeRotationDriverのMaxSwingを自動調整
-  - **視点位置**: 目ボーンの中点から眉間（顔表面）へ自動オフセット
+  - **視点位置**: 目ボーンの中点から眉間へ自動オフセットし、必要なら前方のメッシュ表面まで補正
   - **アバター保護**: SimpleAvatarProtectionを既定で付与
   - **AvatarRenderSettings**: 前髪が一人称視点を遮る問題を回避
   - **手の向き**: ボーン位置から決定論的に計算（+Z=中指方向、+Y=手の甲）
@@ -36,6 +36,18 @@ VRMアバターを **.resonitepackage** に変換するWindows用ツールです
 `Invisible Material`、headless mesh、Loading Display、読み込み状態コンポーネント、
 `Avatar Root Identification` は出力されません。揺れものがある場合の DynamicBone 用
 `modular_avatar` 設定、`DefaultUserScale`、Avatar Grab & Equip 修正は各機能の条件に従って残ります。
+
+### 視点位置オプション
+
+- **メッシュの表面に合わせて視点を前に移動する**（既定: オン）: 現在の自動計算または
+  `視点の前方オフセット` / `視点の上方オフセット` で求めた位置からアバター正面へ判定し、
+  アクティブかつ有効な全 `MeshRenderer` / `SkinnedMeshRenderer` のうち最も近い三角形面まで
+  視点を前へ移動します。面との重なりを避けるため、交点からさらに2mm前へ配置します。
+  マテリアルの透明度は判定せず、前方に交点がない場合は元の位置を維持します。
+  CLI では `--no-view-surface-correction` で無効にできます。
+
+この補正は変換時の位置計算だけで完結し、出力へ専用スロット、コンポーネント、マテリアルを
+追加しません。
 
 ## 必要環境
 

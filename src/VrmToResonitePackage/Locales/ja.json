@@ -29,6 +29,7 @@
     "KeepOriginalAvatarScale": "DefaultUserScaleを追加（値: 1）",
     "GenerateFirstPersonVisibility": "一人称で一部メッシュを非表示にする",
     "GenerateAvatarLoadingDisplay": "読み込み中にアイコンを表示する",
+    "CorrectViewpointToMeshSurface": "メッシュの表面に合わせて視点を前に移動する",
     "PointFilterTextures": "すべてのアバターテクスチャをPointフィルターにする",
     "KeepWorkingFiles": "作業用一時ファイルを残す",
     "ChooseTransparentMode": "半透明マテリアルの変換先を手動で選ぶ",

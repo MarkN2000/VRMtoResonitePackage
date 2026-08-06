@@ -63,6 +63,7 @@ dotnet publish src/VrmToResonitePackage -c Release -o publish   # 配布用
 | `--face-tracking` | VRM 表情のフェイストラッキング連動をオプトイン（既定は付与しない） |
 | `--no-protection` | SimpleAvatarProtection を付けない（既定は付与） |
 | `--view-forward` / `--view-up` / `--near-clip` | 視点オフセット・NearClip の上書き |
+| `--no-view-surface-correction` | 前方のメッシュ表面への視点補正を無効化（既定は有効） |
 | `--import-timeout <sec>` | インポートのタイムアウト（既定 300） |
 | `--keep-working-files` | 中間ファイルを残す |
 
@@ -73,6 +74,7 @@ dotnet publish src/VrmToResonitePackage -c Release -o publish   # 配布用
 - `Program.cs` / `GuiApp.cs` — CLI / WPF GUI エントリポイント、引数パース
 - `Converter.cs` — 変換の統括（VRM 経路 / VRChat 経路を拡張子で分岐）
 - `AvatarSetup.cs` — ゲーム内 AvatarCreator 相当のセットアップ再現
+- `ViewpointSurfaceCorrection.cs` — アクティブな全メッシュに対する視点の前方交差・表面補正
 - `SpringBoneSetup.cs` — VRM スプリングボーン → DynamicBoneChain 変換
 - `MaterialTuner.cs` — MToon → XiexeToon マテリアル変換
 - `PackageInspector.cs` — `--inspect` のコンポーネント構造表示
@@ -199,9 +201,13 @@ Y180∘FlipX＝Z 鏡映で**体・頭が前後逆・腕は左右(X)保持**に�
   誤分類発生のサイン。
 - `BipedRig`/`VRIK` はインポート済みモデル子スロットではなく avatar root に作る。子に置くと
   `VRIKAvatar.Setup` の `CenteredRoot` も `AvatarRoot/Model/CenteredRoot` になり、ルート階層が一段深くなる。
-- **視点位置**: 目ボーン中点だと顔メッシュに埋まる。**眉間（顔表面）へオフセット**する
+- **視点位置**: 目ボーン中点だと顔メッシュに埋まる。まず**眉間へオフセット**する
   （前方＝目間距離×0.7 をクランプ 3〜9cm、上＝×0.2 を 0.5〜2.5cm）。`--view-forward`/`--view-up` で
-  上書き可。
+  上書き可。続けて、GUI の「メッシュの表面に合わせて視点を前に移動する」がオン（既定）の場合は、
+  その位置から正面方向にあるアクティブかつ有効な全 MeshRenderer / SkinnedMeshRenderer の
+  最も近い三角形面まで前進し、交点から2mm前へ配置する。顔名・表情・材質透明度による分類はせず、
+  交点がなければ元の位置を維持する。`--no-view-surface-correction` で無効化できる。
+  この補正は変換時だけ行い、専用のスロット・コンポーネント・マテリアルは出力しない。
 - **AvatarRenderSettings**: ルート直下に作り **NearClip=0.075、FarClip=null**（前髪が一人称視点を
   遮る問題の回避）。`--near-clip` で変更可（0 で無効）。
 - **VRM FirstPerson 表示制御は既定で生成しない**。Modular Avatar の
