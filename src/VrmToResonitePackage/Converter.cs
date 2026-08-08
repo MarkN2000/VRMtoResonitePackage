@@ -286,6 +286,7 @@ internal static class Converter
                     UniLog.Log($"テクスチャのFilterModeをPointに設定しました: {changedCount}件");
                 }
 
+                AssetFolderSetup.Apply(assetsSlot);
                 root.Name = displayName;
                 Console.WriteLine("パッケージを書き出し中...");
                 await ExportPackage(world, root, outputPath);
@@ -507,6 +508,7 @@ internal static class Converter
                     await default(NextUpdate);
                 }
 
+                AssetFolderSetup.Apply(assetsSlot);
                 root.Name = displayName;
                 Console.WriteLine("パッケージを書き出し中...");
                 await ExportPackage(world, root, outputPath);

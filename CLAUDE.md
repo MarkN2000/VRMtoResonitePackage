@@ -75,6 +75,7 @@ dotnet publish src/VrmToResonitePackage -c Release -o publish   # 配布用
 - `Converter.cs` — 変換の統括（VRM 経路 / VRChat 経路を拡張子で分岐）
 - `AvatarSetup.cs` — ゲーム内 AvatarCreator 相当のセットアップ再現
 - `ViewpointSurfaceCorrection.cs` — アクティブな全メッシュに対する視点の前方交差・表面補正
+- `AssetFolderSetup.cs` — 書き出し直前に Assets 配下を Meshes / Materials / Textures へ型別整理
 - `SpringBoneSetup.cs` — VRM スプリングボーン → DynamicBoneChain 変換
 - `MaterialTuner.cs` — MToon → XiexeToon マテリアル変換
 - `PackageInspector.cs` — `--inspect` のコンポーネント構造表示
@@ -112,6 +113,10 @@ dotnet publish src/VrmToResonitePackage -c Release -o publish   # 配布用
 - **パッケージ出力**: `Slot.SaveObject(DependencyHandling.CollectAssets)` →
   `RecordHelper.CreateForObject<Record>` → `PackageCreator.BuildPackage`
   （`PackageExportable.cs` が手本）。
+- **Assets の整理**: 全アセット生成と遅延処理の完了後、書き出し直前に直下の各スロット階層を
+  `StaticMesh` → `Meshes`、Material のアセットプロバイダー → `Materials`、`StaticTexture2D` →
+  `Textures` へ移動する。複数カテゴリまたは未分類のプロバイダーを含む階層は直下に残し、
+  コンポーネントの作り直しや参照の張り直しはしない。
 - **正確な API が必要なとき**: インストール済み DLL を直接読むのが確実。
   `ilspycmd -t <型名> FrooxEngine.dll`。ローカルにデコンパイル済みソースを置いて grep するのも
   有効だが、デコンパイルは古い場合がある。

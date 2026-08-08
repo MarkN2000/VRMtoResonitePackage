@@ -49,6 +49,23 @@ VRMアバターを **.resonitepackage** に変換するWindows用ツールです
 この補正は変換時の位置計算だけで完結し、出力へ専用スロット、コンポーネント、マテリアルを
 追加しません。
 
+### 生成アセットの整理
+
+出力パッケージの `Assets` スロットには、書き出し前に次のフォルダを作成します。
+
+```text
+Assets
+├─ Meshes
+├─ Materials
+└─ Textures
+```
+
+`StaticMesh` を含むスロットは `Meshes`、Material のアセットプロバイダーを含むスロットは
+`Materials`、`StaticTexture2D` を含むスロットは `Textures` へ移動します。Thumbnail、ShadowRamp、
+FirstPerson 用の複製メッシュや Invisible Material も同じ規則で整理します。
+複数カテゴリまたは未分類のアセットを同じスロット階層に含む場合は、誤分類を避けるため
+`Assets` 直下に残します。スロットの親だけを変更するため、Renderer や Material の参照は維持されます。
+
 ## 必要環境
 
 - Windows + .NET 10 ランタイム
