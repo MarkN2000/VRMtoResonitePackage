@@ -958,6 +958,7 @@ internal static class Converter
 
     private static async Task ExportPackage(World world, Slot root, string outputPath)
     {
+        await MaterialTuner.RemoveIneffectiveTextures(root);
         SavedGraph graph = root.SaveObject(DependencyHandling.CollectAssets);
         string ownerId = world.LocalUser.UserID ?? world.LocalUser.MachineID;
         SkyFrost.Base.Record record = RecordHelper.CreateForObject<SkyFrost.Base.Record>(root.Name, ownerId, null);

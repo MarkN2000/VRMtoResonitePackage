@@ -49,6 +49,97 @@ internal static class MaterialTuner
         UniLog.Log($"マテリアルを {tuned} 件調整しました。");
     }
 
+    public static async Task RemoveIneffectiveTextures(Slot root)
+    {
+        Engine engine = root.Engine;
+        var blackTextures = new Dictionary<Uri, bool>();
+        var detachedTextures = new HashSet<StaticTexture2D>();
+        int removed = 0;
+        foreach (XiexeToonMaterial material in root.GetComponentsInChildren<XiexeToonMaterial>().ToList())
+        {
+            foreach (var (map, tint) in new[]
+            {
+                (material.EmissionMap, material.EmissionColor.Value),
+                (material.Matcap, material.MatcapTint.Value)
+            })
+            {
+                if (map.Target == null)
+                {
+                    continue;
+                }
+                StaticTexture2D texture = map.Target as StaticTexture2D;
+                bool ineffective = tint.rgb == float3.Zero;
+                if (!ineffective && texture?.URL.Value is Uri uri)
+                {
+                    if (!blackTextures.TryGetValue(uri, out ineffective))
+                    {
+                        await default(ToBackground);
+                        try
+                        {
+                            using System.IO.Stream stream = await engine.LocalDB.TryOpenAsset(uri);
+                            if (stream != null)
+                            {
+                                Bitmap2D bitmap = TextureDecoder.Decode(stream, null, generateMipMaps: false);
+                                ineffective = IsBlackTexture(bitmap);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            UniLog.Warning($"テクスチャの無効判定をスキップしました ({uri}): {ex.Message}");
+                        }
+                        await default(ToWorld);
+                        blackTextures[uri] = ineffective;
+                    }
+                }
+                if (ineffective)
+                {
+                    map.Target = null;
+                    if (texture != null)
+                    {
+                        detachedTextures.Add(texture);
+                    }
+                    removed++;
+                }
+            }
+        }
+
+        if (detachedTextures.Count > 0)
+        {
+            var references = new List<IWorldElement>();
+            foreach (Component component in root.GetComponentsInChildren<Component>())
+            {
+                component.GetReferencedObjects(references, assetRefOnly: false);
+            }
+            var referencedTextures = references.OfType<StaticTexture2D>().ToHashSet();
+            foreach (StaticTexture2D texture in detachedTextures.Except(referencedTextures))
+            {
+                Slot slot = texture.Slot;
+                texture.Destroy();
+                if (!slot.Components.Any() && !slot.Children.Any())
+                {
+                    slot.Destroy();
+                }
+            }
+        }
+        UniLog.Log($"効果のないEmissionMap・MatCapの参照を {removed} 件除去しました。");
+    }
+
+    private static bool IsBlackTexture(Bitmap2D bitmap)
+    {
+        for (int y = 0; y < bitmap.Size.y; y++)
+        {
+            for (int x = 0; x < bitmap.Size.x; x++)
+            {
+                color pixel = bitmap.GetPixel(x, y);
+                if (pixel.r != 0f || pixel.g != 0f || pixel.b != 0f)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private static VrmMaterialInfo FindInfo(VrmModel vrm, string slotName)
     {
         if (string.IsNullOrEmpty(slotName))
