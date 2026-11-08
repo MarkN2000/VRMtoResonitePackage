@@ -4,7 +4,7 @@ param(
     [string]$Tag = "",
     [string]$ResonitePath = "",
     [string]$Output = "$PSScriptRoot\publish",
-    [string]$AssetName = "ResoPon.exe",
+    [string]$AssetName = "ResoPonFork.exe",
     [switch]$CreateTag,
     [switch]$PushTag
 )
@@ -81,13 +81,13 @@ if ($PushTag) {
     }
 }
 
-$releaseTitle = "ResoPon $Tag"
+$releaseTitle = "ResoPon Fork $Tag"
 
 $releaseExists = $false
 try {
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    gh release view $Tag *> $null
+    gh release view $Tag --repo MarkN2000/VRMtoResonitePackage *> $null
     if ($LASTEXITCODE -eq 0) {
         $releaseExists = $true
     }
@@ -96,9 +96,9 @@ try {
 }
 
 if ($releaseExists) {
-    gh release upload $Tag $exePath --clobber
+    gh release upload $Tag $exePath --clobber --repo MarkN2000/VRMtoResonitePackage
 } else {
-    gh release create $Tag $exePath --title $releaseTitle --notes "Release $Tag."
+    gh release create $Tag $exePath --title $releaseTitle --notes "Release $Tag." --repo MarkN2000/VRMtoResonitePackage
 }
 
 if ($LASTEXITCODE -ne 0) {

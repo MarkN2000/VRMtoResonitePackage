@@ -1,4 +1,8 @@
-# ResoPon
+# ResoPon Fork
+
+[ResoPon](https://github.com/orange3134/VRMtoResonitePackage) から分岐した独立版です。
+青を基調とするUIと `ResoPonFork.exe` で本家と区別できます。
+本家への統合は予定していません。
 
 VRMアバターを **.resonitepackage** に変換するWindows用ツールです。
 変換した resonitepackage は、Resonite のファイルブラウザやインベントリへの
@@ -75,7 +79,17 @@ FirstPerson 用の複製メッシュや Invisible Material も同じ規則で整
 
 ### ドラッグ＆ドロップ
 
-`ResoPon.exe` を起動して `.vrm` をドロップしてください。
+`ResoPonFork.exe` を起動して `.vrm` をドロップしてください。
+
+### アップデート
+
+配布用の単一ファイルEXEは、起動時に
+[このforkの最新リリース](https://github.com/MarkN2000/VRMtoResonitePackage/releases/latest)
+を確認します。新しい版がある場合は確認画面を表示し、承認後にダウンロード、
+SHA-256の検証、EXEの差し替え、再起動を行います。
+本家のリリースは確認しません。設定の「起動時にResoPon Forkのアップデートを確認する」で
+無効にできます。通信に失敗した場合や、リリースがまだない場合も変換は使用できます。
+通常の `dotnet build` で生成したEXEやCLI起動では更新を確認しません。
 
 ### Resoniteのパス指定
 
@@ -94,7 +108,7 @@ dotnet build src/VrmToResonitePackage -c Release
 配布用:
 
 ```
-dotnet publish src/VrmToResonitePackage -c Release -o publish
+.\publish.ps1
 ```
 
 Resonite DLLの参照解決には、ビルド時に `ResonitePath` プロパティ
@@ -139,15 +153,18 @@ Resonite（FrooxEngine）のインポーターには特定のVRMでクラッシ�
 ## データの保存場所
 
 このツールはエンジン起動時に`-DataPath`/`-CachePath`相当の指定を行い、
-すべてのデータを専用フォルダ `%LOCALAPPDATA%\ResoPon\` 配下に生成します：
+エンジンのデータを専用フォルダ `%LOCALAPPDATA%\ResoPonFork\` 配下に生成します：
 
 - `Data\` — エンジンのLocalDB（アセットキャッシュ）。破損時は自動でリセットされます
 - `Cache\` — エンジンのキャッシュ
-- `Logs\` — 変換ログ。問題が起きたときはここを確認してください
+- `Updates\` — ダウンロードしたアップデートの一時保存先
+
+設定は `%APPDATA%\ResoPonFork\settings.json`、変換ログはEXEと同じフォルダの
+`Logs\` に保存します。本家の設定・キャッシュとは分離しています。
 
 **Resonite本体のデータフォルダには一切触れません**（プレイ環境に影響しません）。
 自動リセット処理にも、このフォルダ外では動作しないガードが入っています。
-ツールの動作がおかしくなった場合は`%LOCALAPPDATA%\ResoPon`を
+ツールの動作がおかしくなった場合は`%LOCALAPPDATA%\ResoPonFork`を
 丸ごと削除しても安全です。
 
 ## 制限事項

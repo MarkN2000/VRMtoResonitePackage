@@ -1,5 +1,5 @@
 # Distribution build script.
-# Output: publish\ResoPon.exe (single file, self-contained .NET runtime).
+# Output: publish\ResoPonFork.exe (single file, requires the .NET runtime).
 # Resonite DLLs are NOT bundled; they are loaded from the installed Resonite at runtime.
 param(
     [string]$ResonitePath = "",
@@ -28,4 +28,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "Output: $Output\ResoPon.exe"
+Write-Host "Output: $Output\ResoPonFork.exe"

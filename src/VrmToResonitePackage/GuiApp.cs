@@ -41,7 +41,7 @@ internal static class GuiApp
 internal sealed class MainWindow : Window
 {
     private readonly Grid _root;
-    private readonly Image _logo;
+    private readonly TextBlock _logo;
     private readonly Grid _dropZone;
     private readonly TextBlock _title;
     private readonly TextBlock _message;
@@ -58,6 +58,7 @@ internal sealed class MainWindow : Window
     private string _lastLogPath;
     private ConversionRunResult _lastResult;
     private bool _isConverting;
+    private bool _isCheckingForUpdates;
     private Point _dragStart;
 
     public MainWindow(IReadOnlyList<string> initialFiles)
@@ -65,7 +66,7 @@ internal sealed class MainWindow : Window
         _settings = GuiSettings.Load();
         AppLocalization.Initialize(_settings.Language);
 
-        Title = $"ResoPon  v{AppVersion.Display}";
+        Title = $"ResoPon Fork  v{AppVersion.Display}";
         Width = 760;
         Height = 500;
         MinWidth = 560;
@@ -80,7 +81,7 @@ internal sealed class MainWindow : Window
 
         _root = new Grid
         {
-            Background = new SolidColorBrush(Color.FromRgb(248, 244, 252))
+            Background = new SolidColorBrush(Color.FromRgb(241, 246, 253))
         };
         Content = _root;
 
@@ -109,11 +110,12 @@ internal sealed class MainWindow : Window
             MaxWidth = 640
         };
 
-        _logo = new Image
+        _logo = new TextBlock
         {
-            Source = SvgImage.Load("logo.svg", TextColor),
-            Width = 380,
-            Stretch = Stretch.Uniform,
+            Text = "ResoPon Fork",
+            FontSize = 48,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = AccentBrush,
             HorizontalAlignment = HorizontalAlignment.Center,
             SnapsToDevicePixels = true
         };
@@ -169,15 +171,93 @@ internal sealed class MainWindow : Window
         _spinnerTimer.Tick += (_, _) => _spinnerRotation.Angle = (_spinnerRotation.Angle + 7) % 360;
 
         ShowIdle();
+        Loaded += async (_, _) => await OnLoadedAsync(initialFiles);
+    }
 
+    private async Task OnLoadedAsync(IReadOnlyList<string> initialFiles)
+    {
+        if (_settings.CheckForUpdates && AutoUpdater.CanSelfUpdate)
+        {
+            bool installingUpdate;
+            _isCheckingForUpdates = true;
+            try
+            {
+                installingUpdate = await CheckForUpdateAsync(initialFiles);
+            }
+            finally
+            {
+                _isCheckingForUpdates = false;
+            }
+            if (installingUpdate || !IsVisible)
+            {
+                return;
+            }
+        }
         if (initialFiles.Count > 0)
         {
-            Loaded += async (_, _) => await StartConversion(initialFiles);
+            await StartConversion(initialFiles);
         }
     }
 
-    // Theme: base color #caa4ec, white text on the base color, #3e3e3e text on light backgrounds.
-    private static Color AccentColor { get; } = Color.FromRgb(0xca, 0xa4, 0xec);
+    private async Task<bool> CheckForUpdateAsync(IReadOnlyList<string> restartArguments)
+    {
+        UpdateRelease release;
+        try
+        {
+            release = await AutoUpdater.CheckAsync();
+        }
+        catch
+        {
+            // Startup update checks are best-effort and must never prevent conversion.
+            return false;
+        }
+
+        if (release == null || !IsVisible)
+        {
+            return false;
+        }
+
+        MessageBoxResult choice = MessageBox.Show(
+            this,
+            AppLocalization.Format("UpdateAvailableMessage", AppVersion.Display, release.Version),
+            AppLocalization.Get("UpdateAvailableTitle"),
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (choice != MessageBoxResult.Yes)
+        {
+            return false;
+        }
+
+        try
+        {
+            ShowConverting(AppLocalization.Get("DownloadingUpdate"));
+            string downloadedPath = await AutoUpdater.DownloadAsync(release);
+            if (!IsVisible)
+            {
+                return true;
+            }
+            AutoUpdater.StartInstallAndRestart(downloadedPath, restartArguments);
+            Application.Current.Shutdown();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (IsVisible)
+            {
+                ShowIdle();
+                MessageBox.Show(
+                    this,
+                    AppLocalization.Format("UpdateFailedMessage", ex.Message),
+                    AppLocalization.Get("UpdateFailedTitle"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            return false;
+        }
+    }
+
+    // Theme: blue accent with white text, dark text on light backgrounds.
+    private static Color AccentColor { get; } = Color.FromRgb(0x25, 0x63, 0xeb);
     private static Color TextColor { get; } = Color.FromRgb(0x3e, 0x3e, 0x3e);
     private static Brush AccentBrush { get; } = Frozen(AccentColor);
     private static Brush TextBrush { get; } = Frozen(TextColor);
@@ -665,7 +745,7 @@ internal sealed class MainWindow : Window
 
     private void WindowOnDragEnter(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) && !_isConverting
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) && !_isConverting && !_isCheckingForUpdates
             ? DragDropEffects.Copy
             : DragDropEffects.None;
         e.Handled = true;
@@ -673,7 +753,7 @@ internal sealed class MainWindow : Window
 
     private async void WindowOnDrop(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(DataFormats.FileDrop) || _isConverting)
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop) || _isConverting || _isCheckingForUpdates)
         {
             return;
         }
@@ -891,6 +971,7 @@ internal sealed class SettingsWindow : Window
     private static string AutoValueText => AppLocalization.Get("Auto");
 
     private readonly ComboBox _language = new();
+    private readonly CheckBox _checkForUpdates = new() { Content = AppLocalization.Get("CheckForUpdates") };
     private readonly TextBox _outputDirectory = new();
     private readonly TextBox _resonitePath = new();
     private readonly CheckBox _noAvatar = new() { Content = AppLocalization.Get("NoAvatarSetup") };
@@ -919,7 +1000,7 @@ internal sealed class SettingsWindow : Window
         MinWidth = 480;
         MinHeight = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(248, 244, 252));
+        Background = new SolidColorBrush(Color.FromRgb(241, 246, 253));
         FontFamily = new FontFamily("Segoe UI");
         FontSize = 14;
 
@@ -943,6 +1024,7 @@ internal sealed class SettingsWindow : Window
 
         panel.Children.Add(Header(AppLocalization.Get("DisplaySettings")));
         panel.Children.Add(SelectionField(AppLocalization.Get("Language"), _language));
+        panel.Children.Add(_checkForUpdates);
         panel.Children.Add(Header(AppLocalization.Get("ConversionOptions"), new Thickness(0, 28, 0, 2)));
         panel.Children.Add(PathRow(AppLocalization.Get("OutputDirectory"), _outputDirectory));
         panel.Children.Add(PathRow(AppLocalization.Get("ResoniteDirectory"), _resonitePath));
@@ -986,6 +1068,7 @@ internal sealed class SettingsWindow : Window
 
     private void LoadValues()
     {
+        _checkForUpdates.IsChecked = Settings.CheckForUpdates;
         _outputDirectory.Text = Settings.OutputDirectory ?? DefaultOutputDirectoryText;
         _resonitePath.Text = Settings.ResonitePath ?? AutoDetectText;
         _noAvatar.IsChecked = Settings.NoAvatar;
@@ -1009,6 +1092,7 @@ internal sealed class SettingsWindow : Window
     {
         try
         {
+            Settings.CheckForUpdates = _checkForUpdates.IsChecked == true;
             Settings.OutputDirectory = EmptyToNull(_outputDirectory.Text, DefaultOutputDirectoryText);
             Settings.ResonitePath = EmptyToNull(_resonitePath.Text, AutoDetectText);
             Settings.NoAvatar = _noAvatar.IsChecked == true;
@@ -1135,7 +1219,7 @@ internal sealed class AvatarSelectionWindow : Window
         MinWidth = 400;
         MinHeight = 320;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(248, 244, 252));
+        Background = new SolidColorBrush(Color.FromRgb(241, 246, 253));
         FontFamily = new FontFamily("Segoe UI");
         FontSize = 14;
 
@@ -1232,7 +1316,7 @@ internal sealed class MtoonTransparentModeWindow : Window
         MinWidth = 460;
         MinHeight = 360;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(248, 244, 252));
+        Background = new SolidColorBrush(Color.FromRgb(241, 246, 253));
         FontFamily = new FontFamily("Segoe UI");
         FontSize = 14;
 
@@ -1332,6 +1416,7 @@ internal sealed class MtoonTransparentModeWindow : Window
 internal sealed class GuiSettings
 {
     public string Language { get; set; }
+    public bool CheckForUpdates { get; set; } = true;
     public string OutputDirectory { get; set; }
     public string ResonitePath { get; set; }
     public bool NoAvatar { get; set; }
@@ -1352,7 +1437,7 @@ internal sealed class GuiSettings
 
     private static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ResoPon",
+        "ResoPonFork",
         "settings.json");
 
     public static GuiSettings Load()
@@ -1379,6 +1464,7 @@ internal sealed class GuiSettings
     public GuiSettings Clone() => new()
     {
         Language = Language,
+        CheckForUpdates = CheckForUpdates,
         OutputDirectory = OutputDirectory,
         ResonitePath = ResonitePath,
         NoAvatar = NoAvatar,
@@ -1401,6 +1487,7 @@ internal sealed class GuiSettings
     public void CopyFrom(GuiSettings other)
     {
         Language = other.Language;
+        CheckForUpdates = other.CheckForUpdates;
         OutputDirectory = other.OutputDirectory;
         ResonitePath = other.ResonitePath;
         NoAvatar = other.NoAvatar;

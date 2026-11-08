@@ -22,9 +22,7 @@ internal static class Converter
 
     public static async Task<ConversionRunResult> RunDetailed(CliOptions options, string resonitePath)
     {
-        string appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ResoPon");
+        string appData = LocalDbMaintenance.ManagedDataRoot;
         string logPath = Path.Combine(AppContext.BaseDirectory, "Logs", $"convert_{DateTime.Now:yyyyMMdd_HHmmss}.log");
         Directory.CreateDirectory(Path.GetDirectoryName(logPath));
         using var logWriter = new StreamWriter(logPath) { AutoFlush = true };

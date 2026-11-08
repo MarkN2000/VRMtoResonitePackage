@@ -7,9 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
-    <AssemblyName>ResoPon</AssemblyName>
+    <AssemblyName>ResoPonFork</AssemblyName>
     <RootNamespace>VrmToResonitePackage</RootNamespace>
-    <Product>ResoPon</Product>
+    <Product>ResoPon Fork</Product>
     <Description>VRM and VRChat avatar package converter for Resonite.</Description>
     <ApplicationIcon>Resources\ResoPon.ico</ApplicationIcon>
     <!-- Version is derived from the build date/time (yyyy.MM.dd.HHmm) so every build/release is

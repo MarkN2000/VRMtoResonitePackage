@@ -12,11 +12,11 @@ namespace VrmToResonitePackage;
 /// </summary>
 internal static class TitleBarTheme
 {
-    // Theme: base color #caa4ec with white caption text when focused; a lighter lavender with muted
+    // Theme: blue accent when focused; a lighter blue with muted
     // text when the window loses focus, mirroring how Windows dims inactive title bars.
-    private static readonly Color ActiveCaption = Color.FromRgb(0xca, 0xa4, 0xec);
-    private static readonly Color InactiveCaption = Color.FromRgb(0xe4, 0xd1, 0xf5);
-    private static readonly Color BaseCaption = Color.FromRgb(248, 244, 252);
+    private static readonly Color ActiveCaption = Color.FromRgb(0x25, 0x63, 0xeb);
+    private static readonly Color InactiveCaption = Color.FromRgb(0x7b, 0xa2, 0xdd);
+    private static readonly Color BaseCaption = Color.FromRgb(241, 246, 253);
 
     // DWMWINDOWATTRIBUTE values (dwmapi.h).
     private const int DWMWA_BORDER_COLOR = 34;
