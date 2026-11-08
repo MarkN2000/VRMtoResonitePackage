@@ -75,6 +75,8 @@ FirstPerson 用の複製メッシュや Invisible Material も同じ規則で整
 - Windows + .NET 10 ランタイム
 - **Resonite がインストールされていること**
 
+Resonite **2026.11.6.1136** のDLLでビルドと既存 `.resonitepackage` の読み込みを確認しています。
+
 ## 使い方
 
 ### ドラッグ＆ドロップ
