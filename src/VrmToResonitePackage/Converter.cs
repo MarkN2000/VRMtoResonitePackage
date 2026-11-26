@@ -1,3 +1,4 @@
+using Elements.Assets;
 using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.Store;
@@ -935,7 +936,7 @@ internal static class Converter
     /// Waits (on the world thread) until every asset provider created by the import has its
     /// asset loaded, so post-load detection logic has correct data to work with.
     /// </summary>
-    private static async Task WaitForAssets(Slot assetsSlot)
+    private static async Task<bool> WaitForAssets(Slot assetsSlot)
     {
         const int timeoutFrames = 60 * 120; // ~2 minutes at 60 ticks
         for (int frame = 0; frame < timeoutFrames; frame++)
@@ -951,16 +952,143 @@ internal static class Converter
             }
             if (allReady)
             {
-                return;
+                return true;
             }
             await default(NextUpdate);
         }
-        UniLog.Warning("一部のアセットの読み込みが完了しませんでした。そのまま続行します。");
+        UniLog.Warning("一部のアセットの読み込みがタイムアウトしました。");
+        return false;
+    }
+
+    private static async Task StripEmptyBones(Slot root)
+    {
+        var groups = root.GetComponentsInChildren<SkinnedMeshRenderer>()
+            .Where(renderer => renderer.Mesh.Target is StaticMesh)
+            .GroupBy(renderer => (StaticMesh)renderer.Mesh.Target)
+            .ToList();
+        int totalRemoved = 0;
+        foreach (var group in groups)
+        {
+            StaticMesh provider = group.Key;
+            if (!await WaitForAssets(provider.Slot))
+            {
+                throw new TimeoutException($"空のボーン除去前にメッシュを読み込めませんでした: {provider.Slot.Name}");
+            }
+
+            var asset = provider.Asset;
+            MeshX mesh;
+            var remap = new List<int>();
+            await default(ToBackground);
+            object readLock = new();
+            await asset.RequestReadLock(readLock).ConfigureAwait(false);
+            int removed;
+            try
+            {
+                mesh = new MeshX(asset.Data);
+                removed = mesh.StripEmptyBones(asset.BoneMetadata, remap);
+            }
+            finally
+            {
+                asset.ReleaseReadLock(readLock);
+            }
+            Uri uri = removed > 0 ? await root.Engine.LocalDB.SaveAssetAsync(mesh).ConfigureAwait(false) : null;
+            await default(ToWorld);
+            if (removed == 0)
+            {
+                continue;
+            }
+
+            provider.URL.Value = uri;
+            foreach (SkinnedMeshRenderer renderer in group)
+            {
+                for (int index = Math.Min(renderer.Bones.Count, remap.Count) - 1; index >= 0; index--)
+                {
+                    if (remap[index] < 0)
+                    {
+                        renderer.Bones.RemoveAt(index);
+                    }
+                }
+            }
+            totalRemoved += removed;
+
+            await default(NextUpdate);
+            if (!await WaitForAssets(provider.Slot))
+            {
+                throw new TimeoutException($"空のボーン除去後にメッシュを読み込めませんでした: {provider.Slot.Name}");
+            }
+        }
+        UniLog.Log($"空のボーンを {groups.Count} メッシュから合計 {totalRemoved} 件除去しました。");
+    }
+
+    private static async Task ConfigureSharedBounds(Slot root)
+    {
+        var renderers = root.GetComponentsInChildren<MeshRenderer>()
+            .Where(renderer => renderer.Mesh.Target != null).ToList();
+        // ponytail: Body-name matching covers these aliases; extend the list for other naming schemes.
+        string[] bodyNames = { "body", "bodyall", "bodybase" };
+        SkinnedMeshRenderer body = renderers.OfType<SkinnedMeshRenderer>().FirstOrDefault(renderer =>
+            bodyNames.Contains(new string(renderer.Slot.Name.Where(char.IsLetterOrDigit).ToArray()),
+                StringComparer.OrdinalIgnoreCase));
+        if (body == null)
+        {
+            UniLog.Warning("胴体メッシュ(body/bodyall/bodybase)が見つからないため、境界の共有設定をスキップしました。");
+            return;
+        }
+
+        foreach (MeshRenderer renderer in renderers)
+        {
+            if (renderer.Mesh.Target is StaticMesh provider && !await WaitForAssets(provider.Slot))
+            {
+                throw new TimeoutException($"境界の設定前にメッシュを読み込めませんでした: {renderer.Slot.Name}");
+            }
+        }
+        await default(NextUpdate);
+        Slot boundsSpace = body.ComputedRendererRoot
+            ?? throw new InvalidOperationException($"胴体メッシュの境界座標系が未確定です: {body.Slot.Name}");
+        BoundingBox combined = BoundingBox.Empty();
+        foreach (MeshRenderer renderer in renderers)
+        {
+            BoundingBox bounds = renderer.LocalBoundingBox;
+            Slot space = renderer.Slot;
+            if (renderer is SkinnedMeshRenderer skinned)
+            {
+                (bounds, space) = skinned.ComputeLocalBounds(skinned.BoundsComputeMethod.Value);
+                if (!bounds.IsValid || space == null)
+                {
+                    (bounds, space) = skinned.ComputeLocalBounds(SkinnedBounds.Static);
+                }
+            }
+            if (bounds.IsValid && space != null)
+            {
+                combined.Encapsulate(bounds.Transform(space.GetLocalToSpaceMatrix(boundsSpace)));
+            }
+        }
+        if (!combined.IsValid)
+        {
+            return;
+        }
+
+        float side = MathX.Max(combined.Size.x, MathX.Max(combined.Size.y, combined.Size.z)) * 1.15f;
+        body.ExplicitLocalBounds.Value = BoundingBox.CenterSize(combined.Center, float3.One * side);
+        body.ProxyBoundsSource.Target = null;
+        body.BoundsComputeMethod.Value = SkinnedBounds.Explicit;
+        foreach (SkinnedMeshRenderer renderer in renderers.OfType<SkinnedMeshRenderer>())
+        {
+            if (renderer != body)
+            {
+                renderer.ProxyBoundsSource.Target = body;
+                renderer.BoundsComputeMethod.Value = SkinnedBounds.Proxy;
+            }
+        }
+        await default(NextUpdate);
+        UniLog.Log($"共有境界を {body.Slot.Name} に設定しました: 中心={combined.Center}, 一辺={side}");
     }
 
     private static async Task ExportPackage(World world, Slot root, string outputPath)
     {
         await MaterialTuner.RemoveIneffectiveTextures(root);
+        await StripEmptyBones(root);
+        await ConfigureSharedBounds(root);
         SavedGraph graph = root.SaveObject(DependencyHandling.CollectAssets);
         string ownerId = world.LocalUser.UserID ?? world.LocalUser.MachineID;
         SkyFrost.Base.Record record = RecordHelper.CreateForObject<SkyFrost.Base.Record>(root.Name, ownerId, null);
