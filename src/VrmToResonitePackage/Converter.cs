@@ -56,6 +56,8 @@ internal static class Converter
             NeverSaveSettings = true,
             NeverSaveDash = true,
             DisablePlatformInterfaces = true,
+            // Local conversion does not need network compatibility hashes or a writable game folder.
+            FastCompatibility = true,
         };
 
         await runner.Initialize(launchOptions).ConfigureAwait(false);

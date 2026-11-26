@@ -12,7 +12,7 @@ Resonite 本体と同じ `ModelImporter` でインポートしたうえで、VRM
 ゲーム内 AvatarCreator 相当のセットアップ（リグ・視点・リップシンク・揺れもの・マテリアル）を
 自動で行う。
 
-- 言語/ランタイム: C# / .NET 10（`net10.0-windows`, WPF GUI 付き, x64）
+- 言語/ランタイム: C# / .NET 11（`net11.0-windows`, WPF GUI 付き, x64）
 - 出力: 単一ファイル exe（`SelfContained=false`、Resonite DLL は非同梱）
 
 ## ビルドとリリース

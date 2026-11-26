@@ -72,10 +72,10 @@ FirstPerson 用の複製メッシュや Invisible Material も同じ規則で整
 
 ## 必要環境
 
-- Windows + .NET 10 ランタイム
+- Windows + [.NET 11 デスクトップ ランタイム (x64)](https://dotnet.microsoft.com/download/dotnet/11.0)
 - **Resonite がインストールされていること**
 
-Resonite **2026.11.6.1136** のDLLでビルドと既存 `.resonitepackage` の読み込みを確認しています。
+対象バージョンは Resonite **2026.11.25.1420** です。
 
 ## 使い方
 
@@ -102,6 +102,8 @@ SHA-256の検証、EXEの差し替え、再起動を行います。
 3. exeと同じフォルダに `resonite-path.txt` を置いてパスを1行書く
 
 ## ビルド方法
+
+.NET 11 SDK が必要です。
 
 ```
 dotnet build src/VrmToResonitePackage -c Release
