@@ -11,7 +11,7 @@ using Vec4 = System.Numerics.Vector4;
 namespace VrmToResonitePackage.Vrchat;
 
 /// <summary>
-/// Builds XiexeToon materials from the avatar's liltoon .mat files (textures + tone parameters)
+/// Builds XiexeToon materials from the avatar's Unity .mat files
 /// and assigns them to the imported renderers per the prefab's material slot order. The FBX import
 /// only produces bare materials (Unity FBX avatars keep materials/textures in separate files), so
 /// these are created here rather than tuned in place. The conversion targets the same XiexeToon
@@ -25,7 +25,7 @@ internal static class VrchatMaterialBuilder
         var materialCache = new Dictionary<string, IAssetProvider<FrooxEngine.Material>>(
             StringComparer.OrdinalIgnoreCase);
 
-        // Build one XiexeToon material per unique liltoon .mat referenced by the avatar.
+        // Build one material per unique Unity .mat referenced by the avatar.
         IEnumerable<string> uniqueGuids = avatar.RendererMaterials
             .SelectMany(r => r.MaterialGuids)
             .Concat(avatar.FbxMaterialGuids.Values)
@@ -101,7 +101,7 @@ internal static class VrchatMaterialBuilder
                 assigned++;
             }
         }
-        UniLog.Log($"liltoonマテリアルを {materialCache.Count} 件生成し、{assigned} スロットに割り当てました。");
+        UniLog.Log($"Unityマテリアルを {materialCache.Count} 件生成し、{assigned} スロットに割り当てました。");
 
         // The FBX import created bare placeholder materials; drop the ones no renderer references now.
         var referenced = new HashSet<RefID>();
@@ -171,7 +171,7 @@ internal static class VrchatMaterialBuilder
         }
 
         Slot slot = assetsSlot.AddSlot($"Material: {info.Name}");
-        if (info.IsFakeShadow)
+        if (info.IsLilToon && info.IsFakeShadow)
         {
             // Match Resonite.UnitySDK's LilToonFakeShadowConverter. FakeShadow is a projected
             // helper overlay, so approximating it as a surface XiexeToon material is visibly wrong.
@@ -185,6 +185,28 @@ internal static class VrchatMaterialBuilder
         }
 
         XiexeToonMaterial material = slot.AttachComponent<XiexeToonMaterial>();
+
+        material.Color.Value = ToColor(info.Color, ColorProfile.sRGB);
+        material.MainTextureScale.Value = ToFloat2(info.MainTexScale);
+        material.MainTextureOffset.Value = ToFloat2(info.MainTexOffset);
+        material.MainTexture.Target = await GetTexture(assetsSlot, package, info.MainTexGuid, textureCache, "MainTex");
+        if (info.UseNormalMap)
+        {
+            StaticTexture2D normal = await GetTexture(assetsSlot, package, info.NormalMapGuid, textureCache,
+                "NormalMap", isNormalMap: true);
+            if (normal != null)
+            {
+                material.NormalMap.Target = normal;
+                material.NormalMapScale.Value = ToFloat2(info.NormalMapScale);
+                material.NormalMapOffset.Value = ToFloat2(info.NormalMapOffset);
+                material.NormalScale.Value = info.NormalScale;
+            }
+        }
+
+        if (!info.IsLilToon)
+        {
+            return material;
+        }
 
         // --- Alpha / culling / queue ---
         switch (info.AlphaMode)
@@ -222,25 +244,6 @@ internal static class VrchatMaterialBuilder
             _ => Culling.Back,
         };
         material.ColorMask.Value = (ColorMask)(byte)info.ColorMask;
-
-        // --- Base color + main texture ---
-        material.Color.Value = ToColor(info.Color, ColorProfile.sRGB);
-        material.MainTextureScale.Value = ToFloat2(info.MainTexScale);
-        material.MainTextureOffset.Value = ToFloat2(info.MainTexOffset);
-        StaticTexture2D mainTex = await GetTexture(assetsSlot, package, info.MainTexGuid, textureCache, "MainTex");
-        if (mainTex != null)
-        {
-            material.MainTexture.Target = mainTex;
-        }
-        StaticTexture2D normal = await GetTexture(assetsSlot, package, info.NormalMapGuid, textureCache, "NormalMap");
-        if (normal != null)
-        {
-            normal.IsNormalMap.Value = true;
-            material.NormalMap.Target = normal;
-            material.NormalMapScale.Value = ToFloat2(info.NormalMapScale);
-            material.NormalMapOffset.Value = ToFloat2(info.NormalMapOffset);
-            material.NormalScale.Value = info.NormalScale;
-        }
 
         material.Saturation.Value = 1f;
         if (info.UseReflection)
@@ -403,10 +406,6 @@ internal static class VrchatMaterialBuilder
             parent = ResolveMaterialInfo(parentGuid, package, resolving);
         }
 
-        if (!LilToonConverter.IsLilToon(matDoc) && parent == null)
-        {
-            return null;
-        }
         return LilToonConverter.Parse(matDoc, parent, IsOutlineShader(matDoc, package));
     }
 
@@ -512,17 +511,18 @@ internal static class VrchatMaterialBuilder
     // ---------------------------------------------------------------- texture import
 
     private static async Task<StaticTexture2D> GetTexture(Slot assetsSlot, UnityPackage package, string guid,
-        Dictionary<string, StaticTexture2D> cache, string label)
+        Dictionary<string, StaticTexture2D> cache, string label, bool isNormalMap = false)
     {
         if (string.IsNullOrEmpty(guid))
         {
             return null;
         }
-        if (cache.TryGetValue(guid, out StaticTexture2D cached))
+        string cacheKey = isNormalMap ? $"{guid}|normal-map" : guid;
+        if (cache.TryGetValue(cacheKey, out StaticTexture2D cached))
         {
             return cached;
         }
-        cache[guid] = null;
+        cache[cacheKey] = null;
         UnityAsset asset = package.ByGuid(guid);
         if (asset?.HasContent != true)
         {
@@ -555,8 +555,9 @@ internal static class VrchatMaterialBuilder
         }
         Slot textureSlot = assetsSlot.AddSlot($"{label}: {Path.GetFileNameWithoutExtension(asset.LogicalPath)}");
         StaticTexture2D texture = textureSlot.AttachComponent<StaticTexture2D>();
+        texture.IsNormalMap.Value = isNormalMap;
         texture.URL.Value = uri;
-        cache[guid] = texture;
+        cache[cacheKey] = texture;
         return texture;
     }
 

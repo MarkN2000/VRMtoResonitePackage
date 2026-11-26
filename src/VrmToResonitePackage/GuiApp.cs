@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -316,18 +317,18 @@ internal sealed class MainWindow : Window
         _detail.Visibility = Visibility.Visible;
         _settingsButton.IsEnabled = true;
         _outputFiles = result.OutputFiles.Where(File.Exists).ToArray();
-        _packageIcon.Visibility = result.ExitCode == 0 && _outputFiles.Count > 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        bool hasOutput = _outputFiles.Count > 0;
+        bool succeeded = result.ExitCode == 0 && hasOutput;
+        _packageIcon.Visibility = hasOutput ? Visibility.Visible : Visibility.Collapsed;
         _lastLogPath = result.LogPath;
-        _title.Text = result.ExitCode == 0
+        _title.Text = succeeded
             ? AppLocalization.Get("ConversionComplete")
             : AppLocalization.Get("ConversionFailed");
-        _message.Text = result.ExitCode == 0
+        _message.Text = hasOutput
             ? AppLocalization.Get("DragPackageToResonite")
             : AppLocalization.Get("CheckLog");
-        _detail.Text = result.ExitCode == 0
-            ? Path.GetFileName(result.OutputFiles.FirstOrDefault() ?? "")
+        _detail.Text = succeeded
+            ? Path.GetFileName(_outputFiles[0])
             : AppLocalization.Format("LogPath", result.LogPath);
     }
 
@@ -555,16 +556,13 @@ internal sealed class MainWindow : Window
         string error = await errorTask;
 
         string logPath = FindLatestLogPath(logsDirectory, startTime);
-        string[] reportedOutputFiles = output
+        string[] outputFiles = output
             .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith("RESOPON_OUTPUT:", StringComparison.Ordinal))
             .Select(line => line["RESOPON_OUTPUT:".Length..].Trim())
             .Where(File.Exists)
             .ToArray();
-        string[] outputFiles = reportedOutputFiles.Length > 0
-            ? reportedOutputFiles
-            : GetExpectedOutputFiles(options).Where(File.Exists).ToArray();
-        if (process.ExitCode != 0 && string.IsNullOrWhiteSpace(logPath))
+        if ((process.ExitCode != 0 || outputFiles.Length == 0) && string.IsNullOrWhiteSpace(logPath))
         {
             logPath = WriteGuiProcessFailureLog(logsDirectory, output, error);
         }
@@ -597,6 +595,8 @@ internal sealed class MainWindow : Window
         startInfo.UseShellExecute = false;
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
+        startInfo.StandardOutputEncoding = Encoding.UTF8;
+        startInfo.StandardErrorEncoding = Encoding.UTF8;
         startInfo.CreateNoWindow = true;
         startInfo.WorkingDirectory = AppContext.BaseDirectory;
         return startInfo;
@@ -693,24 +693,6 @@ internal sealed class MainWindow : Window
         arguments.Add(value.Value.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static string[] GetExpectedOutputFiles(CliOptions options)
-    {
-        return options.InputFiles
-            .Select(file =>
-            {
-                string outputDirectory = options.OutputDirectory ?? Path.GetDirectoryName(file);
-                string outputName = string.Equals(
-                        Path.GetExtension(file), ".unitypackage", StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(options.AvatarName)
-                        ? options.AvatarName
-                        : Path.GetFileNameWithoutExtension(file);
-                return Path.Combine(
-                    outputDirectory,
-                    SanitizeFileName(outputName) + ".resonitepackage");
-            })
-            .ToArray();
-    }
-
     private static string FindLatestLogPath(string logsDirectory, DateTime startTime)
     {
         if (!Directory.Exists(logsDirectory))
@@ -732,15 +714,6 @@ internal sealed class MainWindow : Window
         string logPath = Path.Combine(logsDirectory, $"gui_process_{DateTime.Now:yyyyMMdd_HHmmss}.log");
         File.WriteAllText(logPath, output + Environment.NewLine + error);
         return logPath;
-    }
-
-    private static string SanitizeFileName(string name)
-    {
-        foreach (char c in Path.GetInvalidFileNameChars())
-        {
-            name = name.Replace(c, '_');
-        }
-        return name;
     }
 
     private void WindowOnDragEnter(object sender, DragEventArgs e)

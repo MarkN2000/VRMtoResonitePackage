@@ -8,6 +8,7 @@ namespace VrmToResonitePackage.Vrchat;
 public sealed class LilToonInfo
 {
     public string Name { get; set; }
+    public bool IsLilToon { get; set; }
     public bool IsFakeShadow { get; set; }
 
     public Vec4 Color { get; set; } = new(1f, 1f, 1f, 1f);
@@ -15,6 +16,7 @@ public sealed class LilToonInfo
     public Vec2 MainTexScale { get; set; } = Vec2.One;
     public Vec2 MainTexOffset { get; set; }
     public string NormalMapGuid { get; set; }
+    public bool UseNormalMap { get; set; }
     public Vec2 NormalMapScale { get; set; } = Vec2.One;
     public Vec2 NormalMapOffset { get; set; }
     public float NormalScale { get; set; } = 1f;
@@ -97,16 +99,33 @@ public static class LilToonConverter
         YamlNode root = material.Root;
         YamlNode props = root?["m_SavedProperties"];
         YamlNode floats = FlattenProps(props?["m_Floats"]);
+        YamlNode ints = FlattenProps(props?["m_Ints"]);
         YamlNode colors = FlattenProps(props?["m_Colors"]);
         YamlNode texEnvs = FlattenProps(props?["m_TexEnvs"]);
 
-        float F(string name, float fallback = 0f) => floats?[name]?.AsFloat(fallback) ?? fallback;
-        bool B(string name, bool fallback = false) => floats?[name] != null ? F(name) >= 0.5f : fallback;
+        float F(string name, float fallback = 0f) => (ints?[name] ?? floats?[name])?.AsFloat(fallback) ?? fallback;
+        bool B(string name, bool fallback = false) => F(name, fallback ? 1f : 0f) >= 0.5f;
         Vec4 C(string name, Vec4 fallback) => colors?[name] != null ? ReadColor(colors[name], fallback) : fallback;
-        string Tex(string name) => texEnvs?[name]?["m_Texture"]?.Guid is string g && g != "0000000000000000f000000000000000" ? g : null;
+        string Tex(string name) => name != null && texEnvs?[name]?["m_Texture"] is { FileID: not 0, Guid: { Length: > 0 } guid }
+            && guid != "0000000000000000f000000000000000" ? guid : null;
         string TexAny(params string[] names) => names.Select(Tex).FirstOrDefault(g => !string.IsNullOrEmpty(g));
         Vec2 TexScale(string name, Vec2 fallback) => ReadVector2(texEnvs?[name]?["m_Scale"], fallback);
         Vec2 TexOffset(string name, Vec2 fallback) => ReadVector2(texEnvs?[name]?["m_Offset"], fallback);
+
+        bool isLilToon = IsLilToon(material) || parent?.IsLilToon == true;
+        string TextureProperty(params string[] names) =>
+            names.FirstOrDefault(name => Tex(name) != null) ?? names.FirstOrDefault(name => texEnvs?[name] != null);
+
+        string main = isLilToon
+            ? TextureProperty("_MainTex", "_BaseMap", "_BaseColorMap")
+            : TextureProperty("_BaseMap", "_BaseColorMap", "_MainTex", "_AlbedoMap", "_Albedo", "_DiffuseMap", "_Diffuse");
+        string normal = isLilToon ? TextureProperty("_BumpMap") : TextureProperty("_BumpMap", "_NormalMap", "_NormalTex");
+        YamlNode baseColor = isLilToon ? colors?["_Color"]
+            : colors?["_BaseColor"] ?? colors?["_Color"] ?? colors?["_TintColor"] ?? colors?["_MainColor"];
+        if (!isLilToon && parent == null && main == null && normal == null && baseColor == null)
+        {
+            return null;
+        }
 
         // Material Variants often serialize only the overridden outline values and omit
         // _UseOutline. Treat those overrides as enabling the feature, while preserving an
@@ -124,17 +143,17 @@ public static class LilToonConverter
         var info = new LilToonInfo
         {
             Name = root?["m_Name"]?.AsString(),
+            IsLilToon = isLilToon,
             IsFakeShadow = colors?["_FakeShadowVector"] != null,
-            Color = C("_Color", parent?.Color ?? new Vec4(1f, 1f, 1f, 1f)),
-            MainTexGuid = TexAny("_MainTex", "_BaseMap", "_BaseColorMap") ?? parent?.MainTexGuid,
-            MainTexScale = TexScale("_MainTex", parent?.MainTexScale ?? Vec2.One),
-            MainTexOffset = TexOffset("_MainTex", parent?.MainTexOffset ?? Vec2.Zero),
-            NormalMapGuid = B("_UseBumpMap", parent?.NormalMapGuid != null)
-                ? Tex("_BumpMap") ?? parent?.NormalMapGuid
-                : null,
-            NormalMapScale = TexScale("_BumpMap", parent?.NormalMapScale ?? Vec2.One),
-            NormalMapOffset = TexOffset("_BumpMap", parent?.NormalMapOffset ?? Vec2.Zero),
-            NormalScale = F("_BumpScale", parent?.NormalScale ?? 1f),
+            Color = ReadColor(baseColor, parent?.Color ?? Vec4.One),
+            MainTexGuid = main != null ? Tex(main) : parent?.MainTexGuid,
+            MainTexScale = main != null ? TexScale(main, Vec2.One) : parent?.MainTexScale ?? Vec2.One,
+            MainTexOffset = main != null ? TexOffset(main, Vec2.Zero) : parent?.MainTexOffset ?? Vec2.Zero,
+            NormalMapGuid = normal != null ? Tex(normal) : parent?.NormalMapGuid,
+            UseNormalMap = B("_UseBumpMap", B("_UseNormalMap", parent?.UseNormalMap ?? !isLilToon)),
+            NormalMapScale = normal != null ? TexScale(normal, Vec2.One) : parent?.NormalMapScale ?? Vec2.One,
+            NormalMapOffset = normal != null ? TexOffset(normal, Vec2.Zero) : parent?.NormalMapOffset ?? Vec2.Zero,
+            NormalScale = F("_BumpScale", F("_NormalScale", parent?.NormalScale ?? 1f)),
             Cull = (int)F("_Cull", parent?.Cull ?? 2f),
             Cutoff = F("_Cutoff", parent?.Cutoff ?? 0.5f),
             ZWrite = F("_ZWrite", parent?.ZWrite == false ? 0f : 1f) >= 0.5f,
