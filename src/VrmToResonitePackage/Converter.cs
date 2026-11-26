@@ -1086,7 +1086,7 @@ internal static class Converter
 
     private static async Task ExportPackage(World world, Slot root, string outputPath)
     {
-        await MaterialTuner.RemoveIneffectiveTextures(root);
+        await MaterialTuner.FinalizeForExport(root);
         await StripEmptyBones(root);
         await ConfigureSharedBounds(root);
         SavedGraph graph = root.SaveObject(DependencyHandling.CollectAssets);

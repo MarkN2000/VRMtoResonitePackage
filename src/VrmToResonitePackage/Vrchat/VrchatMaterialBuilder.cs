@@ -269,7 +269,6 @@ internal static class VrchatMaterialBuilder
         if (info.UseShadow)
         {
             material.ShadowRamp.Target = await GenerateShadowRamp(assetsSlot, info);
-            material.ShadowSharpness.Value = 0f;
             material.ShadowRim.Value = colorX.White;
             StaticTexture2D shadowMask = await GetTexture(assetsSlot, package, info.ShadowStrengthMaskGuid,
                 textureCache, "ShadowStrengthMask");
@@ -293,7 +292,6 @@ internal static class VrchatMaterialBuilder
         else
         {
             material.ShadowRamp.Target = null;
-            material.ShadowSharpness.Value = 0f;
         }
 
         // lilToon's rim model cannot be represented reliably by XiexeToon. Match

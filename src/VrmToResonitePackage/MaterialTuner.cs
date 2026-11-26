@@ -42,14 +42,13 @@ internal static class MaterialTuner
             {
                 // No MToon data: a rampless soft shadow is the closest neutral look.
                 material.ShadowRamp.Target = null;
-                material.ShadowSharpness.Value = 0f;
             }
             tuned++;
         }
         UniLog.Log($"マテリアルを {tuned} 件調整しました。");
     }
 
-    public static async Task RemoveIneffectiveTextures(Slot root)
+    public static async Task FinalizeForExport(Slot root)
     {
         Engine engine = root.Engine;
         var blackTextures = new Dictionary<Uri, bool>();
@@ -57,6 +56,7 @@ internal static class MaterialTuner
         int removed = 0;
         foreach (XiexeToonMaterial material in root.GetComponentsInChildren<XiexeToonMaterial>().ToList())
         {
+            material.ShadowSharpness.Value = 0f;
             foreach (var (map, tint) in new[]
             {
                 (material.EmissionMap, material.EmissionColor.Value),
@@ -311,7 +311,6 @@ internal static class MaterialTuner
                 }
             }
             material.ShadowRim.Value = colorX.White;
-            material.ShadowSharpness.Value = 0f;
             material.ShadowRimRange.Value = 0.7f;
             material.ShadowRimThreshold.Value = 0.1f;
             material.ShadowRimSharpness.Value = 0.3f;
@@ -320,7 +319,6 @@ internal static class MaterialTuner
         else
         {
             material.ShadowRamp.Target = null;
-            material.ShadowSharpness.Value = 0f;
         }
 
         // --- Matcap ---
